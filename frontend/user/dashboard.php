@@ -659,7 +659,7 @@
 <script>
     // API Configuration
     const API_BASE_URL = window.location.origin.includes('localhost') 
-        ? 'http://localhost:8001' 
+        ? 'https://tbt-mega.onrender.com/' 
         : window.location.origin;
     
     // State management
