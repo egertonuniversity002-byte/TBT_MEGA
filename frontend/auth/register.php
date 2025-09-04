@@ -135,7 +135,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   console.log("Form Data:", formData); // check phone number here
 
   try {
-    const API_BASE = window.API_BASE || " http://127.0.0.1:5000";
+    const API_BASE = window.API_BASE || "https://tbt-mega.onrender.com";
     const res = await fetch(`${API_BASE}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

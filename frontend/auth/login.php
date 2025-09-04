@@ -75,7 +75,7 @@
       };
 
       try {
-        const API_BASE = window.API_BASE || "http://172.17.106.84:5000";
+        const API_BASE = window.API_BASE || "https://tbt-mega.onrender.com";
         const res = await fetch(`${API_BASE}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -1,7 +1,7 @@
 const loader = document.getElementById("loader");
 const msgBox = document.getElementById("messageBox");
 // Centralized API base (override by defining window.API_BASE earlier if needed)
-const API_BASE = window.API_BASE || "https://official-paypal.onrender.com";
+const API_BASE = window.API_BASE || "https://tbt-mega.onrender.com";
 
 // Show styled messages
 function showMessage(text, type) {
