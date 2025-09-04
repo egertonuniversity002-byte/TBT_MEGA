@@ -90,7 +90,7 @@
           localStorage.setItem('token', result.token);
           showMessage("✅ " + result.message, "success");
           // Check user role and redirect accordingly
-          const redirectUrl = result.role === 'admin' ? "../auth/admin-dashboard.php" : "../user/dashboard.php";
+          const redirectUrl = result.role === 'admin' ? "/auth/admin-dashboard.php" : "/user/dashboard.php";
           setTimeout(() => window.location.href = redirectUrl, 1500);
         } else {
           showMessage("❌ " + (result.message || "Invalid credentials"), "error");

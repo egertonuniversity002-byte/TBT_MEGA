@@ -51,6 +51,7 @@ ipn_collection = db.pesapal_ipn
 referrals_collection = db.referrals
 transactions_collection = db.transactions
 tasks_collection = db.tasks
+notifications_collection = db.notifications
 
 # PesaPal API URLs
 if app.config['PESAPAL_ENVIRONMENT'] == 'live':
@@ -284,6 +285,15 @@ def pesapal_callback():
                         'status':'completed', 'provider':'system', 'tracking_id': tracking_id, 'created_at': datetime.datetime.utcnow()
                     })
 
+                # Notify user in-app
+                try:
+                    msg = f"Deposit of {format_amount(amount, currency)} successful."
+                    if bonus > 0:
+                        msg += f" Bonus {format_amount(bonus, currency)} credited."
+                    create_notification(pay['user_id'], 'Deposit Successful', msg, 'success', {'tracking_id': tracking_id})
+                except Exception:
+                    pass
+
                 # Handle referral bonus (45% of amount paid)
                 if user and user.get('ref_code'):
                     referrer = users_collection.find_one({'referral_code': user['ref_code']})
@@ -294,8 +304,19 @@ def pesapal_callback():
                             'user_id': referrer['_id'], 'type': 'referral_bonus', 'amount': referral_bonus, 'currency': currency,
                             'status':'completed', 'provider':'system', 'referred_user': str(user['_id']), 'created_at': datetime.datetime.utcnow()
                         })
+                        # Notify referrer
+                        try:
+                            create_notification(referrer['_id'], 'Referral Bonus', f"You earned {format_amount(referral_bonus, currency)} from a referral deposit.", 'success', {'referred_user': str(user['_id'])})
+                        except Exception:
+                            pass
         elif status in ('FAILED','CANCELLED'):
             payments_collection.update_one({'order_tracking_id': tracking_id}, {'$set': {'status': status.lower(), 'completed_at': datetime.datetime.utcnow()}})
+            # Notify user if we can find them
+            if pay and pay.get('user_id'):
+                try:
+                    create_notification(pay['user_id'], 'Deposit Failed', 'Your deposit attempt failed or was cancelled.', 'error', {'tracking_id': tracking_id})
+                except Exception:
+                    pass
         else:
             payments_collection.update_one({'order_tracking_id': tracking_id}, {'$set': {'status': 'pending'}})
 
@@ -332,6 +353,18 @@ def request_withdrawal(current_user):
         'wallet': wallet, 'status':'pending', 'created_at': datetime.datetime.utcnow()
     })
 
+    # Notify user
+    try:
+        create_notification(
+            current_user['_id'],
+            'Withdrawal Requested',
+            f"Your withdrawal request for {format_amount(amount, current_user.get('currency','KES'))} is pending.",
+            'info',
+            {'withdrawal_id': str(wid), 'wallet': wallet}
+        )
+    except Exception:
+        pass
+
     return jsonify({'status':'success','id': str(wid), 'message':'Withdrawal request submitted'}), 200
 
 def send_email(to_email, subject, body):
@@ -353,6 +386,68 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Email error: {e}")
         return False
+
+def create_notification(user_id, title, message, ntype='info', extra=None):
+    """Create a notification for a user"""
+    try:
+        doc = {
+            'user_id': user_id,
+            'title': title,
+            'message': message,
+            'type': ntype,  # info | success | warning | error
+            'is_read': False,
+            'extra': extra or {},
+            'created_at': datetime.datetime.utcnow()
+        }
+        notifications_collection.insert_one(doc)
+    except Exception as e:
+        # Don't crash main flow on notification failure
+        print(f"Notification error: {e}")
+
+@app.route('/notifications', methods=['GET'])
+@token_required
+def get_user_notifications(current_user):
+    try:
+        # Pagination (optional)
+        page = int(request.args.get('page', 1))
+        limit = max(1, min(int(request.args.get('limit', 20)), 100))
+        skip = (page - 1) * limit
+
+        cursor = notifications_collection.find({'user_id': current_user['_id']}).sort('created_at', -1).skip(skip).limit(limit)
+        items = []
+        for n in cursor:
+            items.append({
+                'id': str(n.get('_id')),
+                'title': n.get('title'),
+                'message': n.get('message'),
+                'type': n.get('type', 'info'),
+                'is_read': n.get('is_read', False),
+                'extra': n.get('extra', {}),
+                'createdAt': n.get('created_at').strftime('%Y-%m-%d %H:%M') if n.get('created_at') else ''
+            })
+        unread_count = notifications_collection.count_documents({'user_id': current_user['_id'], 'is_read': {'$ne': True}})
+        total = notifications_collection.count_documents({'user_id': current_user['_id']})
+        return jsonify({'status': 'success', 'data': {'items': items, 'unread_count': unread_count, 'page': page, 'limit': limit, 'total': total}}), 200
+    except Exception as e:
+        return jsonify({'message': f'Failed to fetch notifications: {str(e)}', 'status': 'error'}), 500
+
+@app.route('/notifications/<notification_id>/read', methods=['POST'])
+@token_required
+def mark_notification_read(current_user, notification_id):
+    try:
+        notifications_collection.update_one({'_id': ObjectId(notification_id), 'user_id': current_user['_id']}, {'$set': {'is_read': True, 'read_at': datetime.datetime.utcnow()}})
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        return jsonify({'message': f'Failed to mark notification as read: {str(e)}', 'status': 'error'}), 500
+
+@app.route('/notifications/mark-all-read', methods=['POST'])
+@token_required
+def mark_all_notifications_read(current_user):
+    try:
+        result = notifications_collection.update_many({'user_id': current_user['_id'], 'is_read': {'$ne': True}}, {'$set': {'is_read': True, 'read_at': datetime.datetime.utcnow()}})
+        return jsonify({'status': 'success', 'message': f'Marked {result.modified_count} as read'}), 200
+    except Exception as e:
+        return jsonify({'message': f'Failed to mark notifications as read: {str(e)}', 'status': 'error'}), 500
 
 # Currency formatting helpers
 currency_symbols = {
@@ -1096,9 +1191,18 @@ def withdraw(current_user):
             'status': 'pending',
             'created_at': datetime.datetime.utcnow()
         }
-        withdrawals_collection.insert_one(withdrawal_data)
+        result = withdrawals_collection.insert_one(withdrawal_data)
+
+        # In-app notification
+        create_notification(
+            current_user['_id'],
+            'Withdrawal Requested',
+            f"Your withdrawal request for {format_amount(amount, current_user.get('currency', 'USD'))} is pending.",
+            'info',
+            {'withdrawal_id': str(result.inserted_id)}
+        )
         
-        # Send notification email
+        # Email notification
         email_body = f"""
         <h2>Withdrawal Request Received</h2>
         <p>Your withdrawal request for <strong>{format_amount(amount, current_user.get('currency', 'USD'))}</strong> has been received and is being processed.</p>
@@ -1636,9 +1740,18 @@ def admin_approve_withdrawal(current_user, withdrawal_id):
             {'$set': {'status': 'approved'}}
         )
 
-        # Send notification email to user
+        # Send in-app notification and email to user
         user = users_collection.find_one({'_id': withdrawal['user_id']})
         if user:
+            # In-app
+            create_notification(
+                withdrawal['user_id'],
+                'Withdrawal Approved',
+                f"Your withdrawal of {format_amount(withdrawal['amount'], withdrawal.get('currency', 'USD'))} has been approved.",
+                'success',
+                {'withdrawal_id': str(withdrawal['_id'])}
+            )
+            # Email
             email_body = f"""
             <h2>Withdrawal Approved</h2>
             <p>Your withdrawal request for <strong>{format_amount(withdrawal['amount'], withdrawal.get('currency', 'USD'))}</strong> has been approved.</p>
@@ -1694,9 +1807,18 @@ def admin_reject_withdrawal(current_user, withdrawal_id):
             {'$set': {'status': 'rejected'}}
         )
 
-        # Send notification email to user
+        # Send in-app notification and email to user
         user = users_collection.find_one({'_id': withdrawal['user_id']})
         if user:
+            # In-app
+            create_notification(
+                withdrawal['user_id'],
+                'Withdrawal Rejected',
+                f"Your withdrawal for {format_amount(withdrawal['amount'], withdrawal.get('currency', 'USD'))} was rejected. Reason: {reason}.",
+                'error',
+                {'withdrawal_id': str(withdrawal['_id']), 'reason': reason}
+            )
+            # Email
             email_body = f"""
             <h2>Withdrawal Rejected</h2>
             <p>Your withdrawal request for <strong>{format_amount(withdrawal['amount'], withdrawal.get('currency', 'USD'))}</strong> has been rejected.</p>
@@ -1728,7 +1850,15 @@ def admin_broadcast_notification(current_user):
         if not title or not message:
             return jsonify({'message': 'Title and message are required', 'status': 'error'}), 400
 
-        return jsonify({'status': 'success', 'message': 'Notification broadcast successfully'}), 200
+        users = list(users_collection.find({}, {'_id': 1}))
+        count = 0
+        for u in users:
+            try:
+                create_notification(u['_id'], title, message, notification_type)
+                count += 1
+            except Exception:
+                pass
+        return jsonify({'status': 'success', 'message': f'Notification broadcast to {count} users'}), 200
 
     except Exception as e:
         return jsonify({'message': f'Error broadcasting notification: {str(e)}', 'status': 'error'}), 500

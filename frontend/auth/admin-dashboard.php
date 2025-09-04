@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
     :root {
       --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -569,6 +570,143 @@
       min-width: 150px;
     }
 
+    /* Enhanced Feedback System */
+    .feedback-container {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 350px;
+    }
+    
+    .feedback-toast {
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      animation: toastIn 0.5s ease forwards, toastOut 0.5s ease forwards 2.5s;
+      transform: translateX(100%);
+      opacity: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .feedback-toast.success {
+      background: #f0fdf4;
+      color: #166534;
+      border-left: 4px solid #22c55e;
+    }
+    
+    .feedback-toast.error {
+      background: #fef2f2;
+      color: #991b1b;
+      border-left: 4px solid #ef4444;
+    }
+    
+    .feedback-toast.warning {
+      background: #fffbeb;
+      color: #92400e;
+      border-left: 4px solid #f59e0b;
+    }
+    
+    .feedback-toast.info {
+      background: #eff6ff;
+      color: #1e40af;
+      border-left: 4px solid #3b82f6;
+    }
+    
+    .feedback-toast-icon {
+      margin-right: 12px;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    
+    .feedback-toast-content {
+      flex: 1;
+    }
+    
+    .feedback-toast-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .feedback-toast-message {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .feedback-toast-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.7;
+      margin-left: 10px;
+      color: inherit;
+      flex-shrink: 0;
+    }
+    
+    .feedback-toast-close:hover {
+      opacity: 1;
+    }
+    
+    .feedback-toast-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.1);
+    }
+    
+    .feedback-toast-progress-bar {
+      height: 100%;
+      animation: progressBar 3s linear forwards;
+    }
+    
+    .success .feedback-toast-progress-bar {
+      background: #22c55e;
+    }
+    
+    .error .feedback-toast-progress-bar {
+      background: #ef4444;
+    }
+    
+    .warning .feedback-toast-progress-bar {
+      background: #f59e0b;
+    }
+    
+    .info .feedback-toast-progress-bar {
+      background: #3b82f6;
+    }
+    
+    @keyframes toastIn {
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes toastOut {
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes progressBar {
+      from {
+        width: 100%;
+      }
+      to {
+        width: 0%;
+      }
+    }
+
     @media (max-width: 768px) {
       .container { padding: 16px; }
       .tabs { flex-direction: column; }
@@ -576,95 +714,104 @@
       .stats-grid { grid-template-columns: 1fr; }
       .row { flex-direction: column; }
       .filter-row { flex-direction: column; align-items: stretch; }
+      .feedback-container {
+        top: 70px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Feedback Toast Container -->
+  <div class="feedback-container" id="feedbackContainer"></div>
+
   <div class="container">
     <div class="header">
       <div>
-        <div class="brand">🚀 Admin Dashboard</div>
+        <div class="brand"><i class="fa-solid fa-rocket"></i> Admin Dashboard</div>
         <div class="muted">Complete platform management system</div>
       </div>
       <div class="toolbar">
-        <a class="btn btn-muted" href="/frontend/user/dashboard.php">👤 User Dashboard</a>
-        <button id="logoutBtn" class="btn btn-danger">🚪 Log Out</button>
+        <a class="btn btn-muted" href="/frontend/user/dashboard.php"><i class="fa-solid fa-user"></i> User Dashboard</a>
+        <button id="logoutBtn" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
       </div>
     </div>
 
     <div id="msg" class="message"></div>
 
     <div class="tabs">
-      <div class="tab active" data-tab="tasks">📋 Tasks</div>
-      <div class="tab" data-tab="users">👥 Users</div>
-      <div class="tab" data-tab="withdrawals">💰 Withdrawals</div>
-      <div class="tab" data-tab="statistics">📊 Statistics</div>
-      <div class="tab" data-tab="broadcast">📢 Broadcast</div>
+      <div class="tab active" data-tab="tasks"><i class="fa-solid fa-list-check"></i> Tasks</div>
+      <div class="tab" data-tab="users"><i class="fa-solid fa-users"></i> Users</div>
+      <div class="tab" data-tab="withdrawals"><i class="fa-solid fa-money-bill-transfer"></i> Withdrawals</div>
+      <div class="tab" data-tab="statistics"><i class="fa-solid fa-chart-simple"></i> Statistics</div>
+      <div class="tab" data-tab="broadcast"><i class="fa-solid fa-bullhorn"></i> Broadcast</div>
     </div>
 
     <!-- Tasks Tab -->
     <div id="tasks" class="tab-content active">
       <div class="card">
-        <div class="card-header">✨ Create New Task</div>
+        <div class="card-header"><i class="fa-solid fa-plus"></i> Create New Task</div>
         <div class="card-body">
           <form id="createForm">
             <div class="row">
               <div class="col">
-                <label>📝 Title</label>
+                <label><i class="fa-solid fa-heading"></i> Title</label>
                 <input type="text" name="title" required placeholder="e.g., Watch TikTok video (30 sec)">
               </div>
               <div class="col">
-                <label>🏷️ Category</label>
+                <label><i class="fa-solid fa-tag"></i> Category</label>
                 <select name="category" required>
-                  <option value="tiktok">🎵 TikTok</option>
-                  <option value="youtube">📺 YouTube</option>
-                  <option value="whatsapp">💬 WhatsApp</option>
-                  <option value="facebook">📘 Facebook Ads</option>
-                  <option value="instagram">📷 Instagram Ads</option>
-                  <option value="ads">📢 Ads</option>
-                  <option value="blogs">📝 Blogs</option>
-                  <option value="trivia">🧠 Trivia</option>
+                  <option value="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</option>
+                  <option value="youtube"><i class="fa-brands fa-youtube"></i> YouTube</option>
+                  <option value="whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</option>
+                  <option value="facebook"><i class="fa-brands fa-facebook"></i> Facebook Ads</option>
+                  <option value="instagram"><i class="fa-brands fa-instagram"></i> Instagram Ads</option>
+                  <option value="ads"><i class="fa-solid fa-ad"></i> Ads</option>
+                  <option value="blogs"><i class="fa-solid fa-blog"></i> Blogs</option>
+                  <option value="trivia"><i class="fa-solid fa-question"></i> Trivia</option>
                 </select>
               </div>
               <div class="col">
-                <label>💰 Reward Price</label>
+                <label><i class="fa-solid fa-coins"></i> Reward Price</label>
                 <input type="number" step="0.01" min="0" name="price" required placeholder="e.g., 0.50">
               </div>
               <div class="col">
-                <label>🏦 Reward Wallet</label>
+                <label><i class="fa-solid fa-wallet"></i> Reward Wallet</label>
                 <select name="reward_wallet">
-                  <option value="main">🏠 Main</option>
-                  <option value="tiktok">🎵 TikTok</option>
-                  <option value="youtube">📺 YouTube</option>
-                  <option value="whatsapp">💬 WhatsApp</option>
-                  <option value="facebook">📘 Facebook</option>
-                  <option value="instagram">📷 Instagram</option>
+                  <option value="main"><i class="fa-solid fa-house"></i> Main</option>
+                  <option value="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</option>
+                  <option value="youtube"><i class="fa-brands fa-youtube"></i> YouTube</option>
+                  <option value="whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</option>
+                  <option value="facebook"><i class="fa-brands fa-facebook"></i> Facebook</option>
+                  <option value="instagram"><i class="fa-brands fa-instagram"></i> Instagram</option>
                 </select>
               </div>
             </div>
             <div class="row">
               <div class="col" style="flex: 1 1 100%;">
-                <label>📖 Instructions</label>
+                <label><i class="fa-solid fa-book"></i> Instructions</label>
                 <textarea name="instructions" placeholder="Describe what the user must do to complete the task."></textarea>
               </div>
             </div>
             <div class="row">
               <div class="col">
-                <label>🔗 Target URL (optional)</label>
+                <label><i class="fa-solid fa-link"></i> Target URL (optional)</label>
                 <input type="text" name="target_url" placeholder="https://...">
               </div>
               <div class="col">
-                <label>🖼️ Image URL (optional)</label>
+                <label><i class="fa-solid fa-image"></i> Image URL (optional)</label>
                 <input type="text" name="image_url" placeholder="https://.../image.jpg">
               </div>
             </div>
             <div class="row" style="align-items:center; justify-content: space-between;">
               <label class="switch">
                 <input id="activeInput" type="checkbox" checked>
-                ✅ Active
+                <i class="fa-solid fa-toggle-on"></i> Active
               </label>
               <button class="btn btn-primary" type="submit">
-                ✨ Create Task
+                <i class="fa-solid fa-plus"></i> Create Task
               </button>
             </div>
           </form>
@@ -672,39 +819,39 @@
       </div>
 
       <div class="card">
-        <div class="card-header">📋 Task Management</div>
+        <div class="card-header"><i class="fa-solid fa-gears"></i> Task Management</div>
         <div class="card-body">
           <div class="filter-row">
             <div class="col">
-              <label>🏷️ Filter: Category</label>
+              <label><i class="fa-solid fa-filter"></i> Filter: Category</label>
               <select id="fCategory">
                 <option value="">All Categories</option>
-                <option value="tiktok">🎵 TikTok</option>
-                <option value="youtube">📺 YouTube</option>
-                <option value="whatsapp">💬 WhatsApp</option>
-                <option value="facebook">📘 Facebook Ads</option>
-                <option value="instagram">📷 Instagram Ads</option>
-                <option value="ads">📢 Ads</option>
-                <option value="blogs">📝 Blogs</option>
-                <option value="trivia">🧠 Trivia</option>
+                <option value="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</option>
+                <option value="youtube"><i class="fa-brands fa-youtube"></i> YouTube</option>
+                <option value="whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</option>
+                <option value="facebook"><i class="fa-brands fa-facebook"></i> Facebook Ads</option>
+                <option value="instagram"><i class="fa-brands fa-instagram"></i> Instagram Ads</option>
+                <option value="ads"><i class="fa-solid fa-ad"></i> Ads</option>
+                <option value="blogs"><i class="fa-solid fa-blog"></i> Blogs</option>
+                <option value="trivia"><i class="fa-solid fa-question"></i> Trivia</option>
               </select>
             </div>
             <div class="col">
-              <label>📊 Filter: Status</label>
+              <label><i class="fa-solid fa-filter"></i> Filter: Status</label>
               <select id="fActive">
                 <option value="">All Status</option>
-                <option value="true">✅ Active</option>
-                <option value="false">❌ Inactive</option>
+                <option value="true"><i class="fa-solid fa-toggle-on"></i> Active</option>
+                <option value="false"><i class="fa-solid fa-toggle-off"></i> Inactive</option>
               </select>
             </div>
             <div class="col" style="min-width:auto;">
-              <button id="applyFilters" class="btn btn-secondary">🔍 Apply Filters</button>
+              <button id="applyFilters" class="btn btn-secondary"><i class="fa-solid fa-filter"></i> Apply Filters</button>
             </div>
             <div class="col" style="flex:1 1 auto; text-align:right; min-width:auto;">
               <div class="pagination">
-                <button id="prevBtn" class="btn btn-muted">⬅️ Prev</button>
+                <button id="prevBtn" class="btn btn-muted"><i class="fa-solid fa-chevron-left"></i> Prev</button>
                 <span class="muted">Page <span id="page">1</span></span>
-                <button id="nextBtn" class="btn btn-muted">Next ➡️</button>
+                <button id="nextBtn" class="btn btn-muted">Next <i class="fa-solid fa-chevron-right"></i></button>
               </div>
             </div>
           </div>
@@ -713,13 +860,13 @@
             <table>
               <thead>
                 <tr>
-                  <th>📝 Title</th>
-                  <th>🏷️ Category</th>
-                  <th>💰 Price</th>
-                  <th>🏦 Wallet</th>
-                  <th>📊 Status</th>
-                  <th>📅 Created</th>
-                  <th style="width: 250px;">⚙️ Actions</th>
+                  <th><i class="fa-solid fa-heading"></i> Title</th>
+                  <th><i class="fa-solid fa-tag"></i> Category</th>
+                  <th><i class="fa-solid fa-coins"></i> Price</th>
+                  <th><i class="fa-solid fa-wallet"></i> Wallet</th>
+                  <th><i class="fa-solid fa-signal"></i> Status</th>
+                  <th><i class="fa-solid fa-calendar"></i> Created</th>
+                  <th style="width: 250px;"><i class="fa-solid fa-gear"></i> Actions</th>
                 </tr>
               </thead>
               <tbody id="taskRows"></tbody>
@@ -732,25 +879,25 @@
     <!-- Users Tab -->
     <div id="users" class="tab-content">
       <div class="card">
-        <div class="card-header">👥 User Management</div>
+        <div class="card-header"><i class="fa-solid fa-users-gear"></i> User Management</div>
         <div class="card-body">
           <div class="search-box">
             <input type="text" id="userSearch" placeholder="Search users by name or email...">
           </div>
           <div class="filter-row">
             <div class="col">
-              <label>📊 Filter: Status</label>
+              <label><i class="fa-solid fa-filter"></i> Filter: Status</label>
               <select id="userStatusFilter">
                 <option value="">All Users</option>
-                <option value="active">✅ Active</option>
-                <option value="inactive">❌ Inactive</option>
+                <option value="active"><i class="fa-solid fa-toggle-on"></i> Active</option>
+                <option value="inactive"><i class="fa-solid fa-toggle-off"></i> Inactive</option>
               </select>
             </div>
             <div class="col" style="flex:1 1 auto; text-align:right; min-width:auto;">
               <div class="pagination">
-                <button id="userPrevBtn" class="btn btn-muted">⬅️ Prev</button>
+                <button id="userPrevBtn" class="btn btn-muted"><i class="fa-solid fa-chevron-left"></i> Prev</button>
                 <span class="muted">Page <span id="userPage">1</span></span>
-                <button id="userNextBtn" class="btn btn-muted">Next ➡️</button>
+                <button id="userNextBtn" class="btn btn-muted">Next <i class="fa-solid fa-chevron-right"></i></button>
               </div>
             </div>
           </div>
@@ -759,14 +906,14 @@
             <table>
               <thead>
                 <tr>
-                  <th>👤 Name</th>
-                  <th>📧 Email</th>
-                  <th>📞 Phone</th>
-                  <th>💰 Balance</th>
-                  <th>📊 Status</th>
-                  <th>🌍 Country</th>
-                  <th>📅 Joined</th>
-                  <th style="width: 200px;">⚙️ Actions</th>
+                  <th><i class="fa-solid fa-user"></i> Name</th>
+                  <th><i class="fa-solid fa-envelope"></i> Email</th>
+                  <th><i class="fa-solid fa-phone"></i> Phone</th>
+                  <th><i class="fa-solid fa-coins"></i> Balance</th>
+                  <th><i class="fa-solid fa-signal"></i> Status</th>
+                  <th><i class="fa-solid fa-earth-africa"></i> Country</th>
+                  <th><i class="fa-solid fa-calendar"></i> Joined</th>
+                  <th style="width: 200px;"><i class="fa-solid fa-gear"></i> Actions</th>
                 </tr>
               </thead>
               <tbody id="userRows"></tbody>
@@ -779,23 +926,23 @@
     <!-- Withdrawals Tab -->
     <div id="withdrawals" class="tab-content">
       <div class="card">
-        <div class="card-header">💰 Withdrawal Management</div>
+        <div class="card-header"><i class="fa-solid fa-money-bill-transfer"></i> Withdrawal Management</div>
         <div class="card-body">
           <div class="filter-row">
             <div class="col">
-              <label>📊 Filter: Status</label>
+              <label><i class="fa-solid fa-filter"></i> Filter: Status</label>
               <select id="withdrawalStatusFilter">
                 <option value="">All Status</option>
-                <option value="pending">⏳ Pending</option>
-                <option value="approved">✅ Approved</option>
-                <option value="rejected">❌ Rejected</option>
+                <option value="pending"><i class="fa-solid fa-clock"></i> Pending</option>
+                <option value="approved"><i class="fa-solid fa-check"></i> Approved</option>
+                <option value="rejected"><i class="fa-solid fa-xmark"></i> Rejected</option>
               </select>
             </div>
             <div class="col" style="flex:1 1 auto; text-align:right; min-width:auto;">
               <div class="pagination">
-                <button id="withdrawalPrevBtn" class="btn btn-muted">⬅️ Prev</button>
+                <button id="withdrawalPrevBtn" class="btn btn-muted"><i class="fa-solid fa-chevron-left"></i> Prev</button>
                 <span class="muted">Page <span id="withdrawalPage">1</span></span>
-                <button id="withdrawalNextBtn" class="btn btn-muted">Next ➡️</button>
+                <button id="withdrawalNextBtn" class="btn btn-muted">Next <i class="fa-solid fa-chevron-right"></i></button>
               </div>
             </div>
           </div>
@@ -804,12 +951,13 @@
             <table>
               <thead>
                 <tr>
-                  <th>👤 User</th>
-                  <th>💰 Amount</th>
-                  <th>🏦 Method</th>
-                  <th>📊 Status</th>
-                  <th>📅 Requested</th>
-                  <th style="width: 200px;">⚙️ Actions</th>
+                  <th><i class="fa-solid fa-user"></i> User</th>
+                  <th><i class="fa-solid fa-money-bill"></i> Amount</th>
+                  <th><i class="fa-solid fa-wallet"></i> Wallet</th>
+                  <th><i class="fa-solid fa-hashtag"></i> Address</th>
+                  <th><i class="fa-solid fa-signal"></i> Status</th>
+                  <th><i class="fa-solid fa-calendar"></i> Requested</th>
+                  <th style="width: 200px;"><i class="fa-solid fa-gear"></i> Actions</th>
                 </tr>
               </thead>
               <tbody id="withdrawalRows"></tbody>
@@ -821,16 +969,52 @@
 
     <!-- Statistics Tab -->
     <div id="statistics" class="tab-content">
-      <div class="stats-grid" id="statsGrid">
-        <!-- Stats will be loaded here -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value" id="totalUsers">0</span>
+          <span class="stat-label"><i class="fa-solid fa-users"></i> Total Users</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="activeUsers">0</span>
+          <span class="stat-label"><i class="fa-solid fa-user-check"></i> Active Users</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="totalTasks">0</span>
+          <span class="stat-label"><i class="fa-solid fa-list-check"></i> Total Tasks</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="activeTasks">0</span>
+          <span class="stat-label"><i class="fa-solid fa-toggle-on"></i> Active Tasks</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="totalWithdrawals">0</span>
+          <span class="stat-label"><i class="fa-solid fa-money-bill-transfer"></i> Total Withdrawals</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="pendingWithdrawals">0</span>
+          <span class="stat-label"><i class="fa-solid fa-clock"></i> Pending Withdrawals</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="totalPayout">0</span>
+          <span class="stat-label"><i class="fa-solid fa-money-bill-wave"></i> Total Payout</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="platformProfit">0</span>
+          <span class="stat-label"><i class="fa-solid fa-chart-line"></i> Platform Profit</span>
+        </div>
       </div>
 
       <div class="card">
-        <div class="card-header">📊 Detailed Statistics</div>
+        <div class="card-header"><i class="fa-solid fa-chart-line"></i> Daily Registrations (Last 30 Days)</div>
         <div class="card-body">
-          <div id="detailedStats">
-            <!-- Detailed stats will be loaded here -->
-          </div>
+          <div id="registrationChart" style="height: 300px; width: 100%;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="fa-solid fa-chart-pie"></i> Task Categories Distribution</div>
+        <div class="card-body">
+          <div id="categoryChart" style="height: 300px; width: 100%;"></div>
         </div>
       </div>
     </div>
@@ -838,641 +1022,822 @@
     <!-- Broadcast Tab -->
     <div id="broadcast" class="tab-content">
       <div class="card">
-        <div class="card-header">📢 Broadcast Notifications</div>
+        <div class="card-header"><i class="fa-solid fa-bullhorn"></i> Send Broadcast Message</div>
         <div class="card-body">
-          <form id="notificationForm">
-            <div class="row">
-              <div class="col">
-                <label>📝 Title</label>
-                <input type="text" name="notificationTitle" required placeholder="Notification title">
-              </div>
-              <div class="col">
-                <label>📊 Type</label>
-                <select name="notificationType">
-                  <option value="info">ℹ️ Info</option>
-                  <option value="success">✅ Success</option>
-                  <option value="warning">⚠️ Warning</option>
-                  <option value="error">❌ Error</option>
-                </select>
-              </div>
+          <form id="broadcastForm">
+            <div class="form-group">
+              <label><i class="fa-solid fa-heading"></i> Message Title</label>
+              <input type="text" name="title" placeholder="Important announcement..." required>
             </div>
-            <div class="row">
-              <div class="col" style="flex: 1 1 100%;">
-                <label>💬 Message</label>
-                <textarea name="notificationMessage" required placeholder="Notification message"></textarea>
-              </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-message"></i> Message Content</label>
+              <textarea name="content" placeholder="Write your message here..." rows="5" required></textarea>
             </div>
-            <div class="row" style="justify-content: flex-end;">
-              <button class="btn btn-primary" type="submit">
-                📢 Send Notification
-              </button>
+            <div class="form-group">
+              <label><i class="fa-solid fa-users"></i> Target Audience</label>
+              <select name="target">
+                <option value="all">All Users</option>
+                <option value="active">Active Users Only</option>
+                <option value="inactive">Inactive Users Only</option>
+                <option value="withdrawals">Users with Withdrawal Requests</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-paper-plane"></i> Message Type</label>
+              <select name="type">
+                <option value="info">Information</option>
+                <option value="warning">Warning</option>
+                <option value="important">Important Announcement</option>
+                <option value="update">System Update</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Send Broadcast</button>
             </div>
           </form>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header">📧 Broadcast Email</div>
+        <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i> Broadcast History</div>
         <div class="card-body">
-          <form id="emailForm">
-            <div class="row">
-              <div class="col">
-                <label>📧 Subject</label>
-                <input type="text" name="emailSubject" required placeholder="Email subject">
-              </div>
-              <div class="col">
-                <label>🌍 Filter by Country (optional)</label>
-                <input type="text" name="emailCountry" placeholder="e.g., Kenya, Uganda">
+          <div class="filter-row">
+            <div class="col" style="flex:1 1 auto; text-align:right; min-width:auto;">
+              <div class="pagination">
+                <button id="broadcastPrevBtn" class="btn btn-muted"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                <span class="muted">Page <span id="broadcastPage">1</span></span>
+                <button id="broadcastNextBtn" class="btn btn-muted">Next <i class="fa-solid fa-chevron-right"></i></button>
               </div>
             </div>
-            <div class="row">
-              <div class="col">
-                <label>💱 Filter by Currency (optional)</label>
-                <input type="text" name="emailCurrency" placeholder="e.g., KES, USD">
-              </div>
-              <div class="col">
-                <label>📊 Filter by Status (optional)</label>
-                <select name="emailStatus">
-                  <option value="">All Users</option>
-                  <option value="active">✅ Active</option>
-                  <option value="inactive">❌ Inactive</option>
-                </select>
-              </div>
-            </div>
-            <div class="row">
-              <div class="col" style="flex: 1 1 100%;">
-                <label>💬 Message</label>
-                <textarea name="emailMessage" required placeholder="Email message content"></textarea>
-              </div>
-            </div>
-            <div class="row" style="justify-content: flex-end;">
-              <button class="btn btn-success" type="submit">
-                📧 Send Email
-              </button>
-            </div>
-          </form>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th><i class="fa-solid fa-heading"></i> Title</th>
+                  <th><i class="fa-solid fa-users"></i> Target</th>
+                  <th><i class="fa-solid fa-message"></i> Type</th>
+                  <th><i class="fa-solid fa-user"></i> Sent By</th>
+                  <th><i class="fa-solid fa-calendar"></i> Date</th>
+                  <th><i class="fa-solid fa-eye"></i> Views</th>
+                </tr>
+              </thead>
+              <tbody id="broadcastRows"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modals -->
-  <div id="editModal" class="modal">
+  <!-- Edit Task Modal -->
+  <div id="editTaskModal" class="modal">
     <div class="modal-content">
-      <div class="modal-header">✏️ Edit Task</div>
-      <form id="editForm">
+      <div class="modal-header"><i class="fa-solid fa-pen-to-square"></i> Edit Task</div>
+      <form id="editTaskForm">
+        <input type="hidden" name="id" id="editTaskId">
         <div class="form-group">
-          <label>📝 Title</label>
-          <input type="text" name="editTitle" required>
+          <label><i class="fa-solid fa-heading"></i> Title</label>
+          <input type="text" name="title" id="editTaskTitle" required>
         </div>
         <div class="form-group">
-          <label>🏷️ Category</label>
-          <select name="editCategory" required>
-            <option value="tiktok">🎵 TikTok</option>
-            <option value="youtube">📺 YouTube</option>
-            <option value="whatsapp">💬 WhatsApp</option>
-            <option value="facebook">📘 Facebook Ads</option>
-            <option value="instagram">📷 Instagram Ads</option>
-            <option value="ads">📢 Ads</option>
-            <option value="blogs">📝 Blogs</option>
-            <option value="trivia">🧠 Trivia</option>
+          <label><i class="fa-solid fa-tag"></i> Category</label>
+          <select name="category" id="editTaskCategory" required>
+            <option value="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</option>
+            <option value="youtube"><i class="fa-brands fa-youtube"></i> YouTube</option>
+            <option value="whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</option>
+            <option value="facebook"><i class="fa-brands fa-facebook"></i> Facebook Ads</option>
+            <option value="instagram"><i class="fa-brands fa-instagram"></i> Instagram Ads</option>
+            <option value="ads"><i class="fa-solid fa-ad"></i> Ads</option>
+            <option value="blogs"><i class="fa-solid fa-blog"></i> Blogs</option>
+            <option value="trivia"><i class="fa-solid fa-question"></i> Trivia</option>
           </select>
         </div>
         <div class="form-group">
-          <label>💰 Price</label>
-          <input type="number" step="0.01" min="0" name="editPrice" required>
+          <label><i class="fa-solid fa-coins"></i> Reward Price</label>
+          <input type="number" step="0.01" min="0" name="price" id="editTaskPrice" required>
         </div>
         <div class="form-group">
-          <label>🏦 Reward Wallet</label>
-          <select name="editWallet">
-            <option value="main">🏠 Main</option>
-            <option value="tiktok">🎵 TikTok</option>
-            <option value="youtube">📺 YouTube</option>
-            <option value="whatsapp">💬 WhatsApp</option>
-            <option value="facebook">📘 Facebook</option>
-            <option value="instagram">📷 Instagram</option>
+          <label><i class="fa-solid fa-wallet"></i> Reward Wallet</label>
+          <select name="reward_wallet" id="editTaskWallet">
+            <option value="main"><i class="fa-solid fa-house"></i> Main</option>
+            <option value="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</option>
+            <option value="youtube"><i class="fa-brands fa-youtube"></i> YouTube</option>
+            <option value="whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</option>
+            <option value="facebook"><i class="fa-brands fa-facebook"></i> Facebook</option>
+            <option value="instagram"><i class="fa-brands fa-instagram"></i> Instagram</option>
           </select>
         </div>
         <div class="form-group">
-          <label>📖 Instructions</label>
-          <textarea name="editInstructions"></textarea>
+          <label><i class="fa-solid fa-book"></i> Instructions</label>
+          <textarea name="instructions" id="editTaskInstructions"></textarea>
         </div>
         <div class="form-group">
-          <label>🔗 Target URL</label>
-          <input type="text" name="editTargetUrl">
+          <label><i class="fa-solid fa-link"></i> Target URL (optional)</label>
+          <input type="text" name="target_url" id="editTaskTargetUrl">
         </div>
         <div class="form-group">
-          <label>🖼️ Image URL</label>
-          <input type="text" name="editImageUrl">
+          <label><i class="fa-solid fa-image"></i> Image URL (optional)</label>
+          <input type="text" name="image_url" id="editTaskImageUrl">
         </div>
         <div class="form-group">
           <label class="switch">
-            <input type="checkbox" name="editActive" checked>
-            ✅ Active
+            <input type="checkbox" name="active" id="editTaskActive">
+            <i class="fa-solid fa-toggle-on"></i> Active
           </label>
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-muted" onclick="closeModal()">❌ Cancel</button>
-          <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+          <button type="button" class="btn btn-muted" onclick="closeModal('editTaskModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div id="overlay" class="overlay">
-    <div class="loader">⏳ Loading...</div>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="overlay">
+    <div class="loader">
+      <i class="fa-solid fa-spinner fa-spin"></i> Processing...
+    </div>
   </div>
 
   <script>
-    const API_BASE = window.API_BASE || 'https://official-paypal.onrender.com';
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = '/frontend/auth/login.php';
-    }
+    // Global variables
+    let currentPage = 1;
+    let currentTab = 'tasks';
+    let tasks = [];
+    let users = [];
+    let withdrawals = [];
+    let broadcasts = [];
 
-    const msg = document.getElementById('msg');
-    const overlay = document.getElementById('overlay');
+    // DOM Ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize tabs
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.getAttribute('data-tab');
+          switchTab(tabName);
+        });
+      });
+
+      // Initialize buttons
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+      document.getElementById('createForm').addEventListener('submit', createTask);
+      document.getElementById('editTaskForm').addEventListener('submit', updateTask);
+      document.getElementById('broadcastForm').addEventListener('submit', sendBroadcast);
+      document.getElementById('applyFilters').addEventListener('click', loadTasks);
+      
+      // Pagination
+      document.getElementById('prevBtn').addEventListener('click', () => changePage(-1));
+      document.getElementById('nextBtn').addEventListener('click', () => changePage(1));
+      document.getElementById('userPrevBtn').addEventListener('click', () => changeUserPage(-1));
+      document.getElementById('userNextBtn').addEventListener('click', () => changeUserPage(1));
+      document.getElementById('withdrawalPrevBtn').addEventListener('click', () => changeWithdrawalPage(-1));
+      document.getElementById('withdrawalNextBtn').addEventListener('click', () => changeWithdrawalPage(1));
+      document.getElementById('broadcastPrevBtn').addEventListener('click', () => changeBroadcastPage(-1));
+      document.getElementById('broadcastNextBtn').addEventListener('click', () => changeBroadcastPage(1));
+      
+      // Search and filters
+      document.getElementById('userSearch').addEventListener('input', debounce(loadUsers, 300));
+      document.getElementById('userStatusFilter').addEventListener('change', loadUsers);
+      document.getElementById('withdrawalStatusFilter').addEventListener('change', loadWithdrawals);
+      
+      // Load initial data
+      loadTasks();
+      loadUsers();
+      loadWithdrawals();
+      loadStatistics();
+      loadBroadcasts();
+    });
 
     // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-
-        // Load tab content
-        switch(tab.dataset.tab) {
-          case 'users': loadUsers(1); break;
-          case 'withdrawals': loadWithdrawals(1); break;
-          case 'statistics': loadStatistics(); break;
+    function switchTab(tabName) {
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.getAttribute('data-tab') === tabName) {
+          tab.classList.add('active');
         }
       });
-    });
-
-    function showMsg(text, type) {
-      msg.textContent = text;
-      msg.className = 'message ' + (type || 'success');
-      msg.style.display = 'block';
-      setTimeout(() => { msg.style.display = 'none'; }, 4000);
-    }
-
-    function showLoading(b) { overlay.style.display = b ? 'flex' : 'none'; }
-
-    async function api(path, options = {}) {
-      const headers = Object.assign({ 'Authorization': `Bearer ${token}` }, options.headers || {});
-      const res = await fetch(path.startsWith('http') ? path : `${API_BASE}${path}`, Object.assign({}, options, { headers }));
-      let json = null;
-      try { json = await res.json(); } catch {}
-      if (!res.ok || (json && json.status === 'error')) {
-        const message = (json && json.message) || ('HTTP ' + res.status);
-        throw new Error(message);
-      }
-      return json;
-    }
-
-    // Tasks functionality
-    const createForm = document.getElementById('createForm');
-    createForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(createForm);
-      const body = {
-        title: fd.get('title'),
-        category: fd.get('category'),
-        price: parseFloat(fd.get('price') || '0'),
-        reward_wallet: fd.get('reward_wallet') || 'main',
-        instructions: fd.get('instructions') || '',
-        target_url: fd.get('target_url') || '',
-        image_url: fd.get('image_url') || '',
-        active: document.getElementById('activeInput').checked
-      };
-      try {
-        showLoading(true);
-        await api('/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        showMsg('✨ Task created successfully!', 'success');
-        createForm.reset();
-        document.getElementById('activeInput').checked = true;
-        await loadTasks(1);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to create task'), 'error');
-      } finally { showLoading(false); }
-    });
-
-    // Tasks list
-    const taskRows = document.getElementById('taskRows');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const pageEl = document.getElementById('page');
-    const fCategory = document.getElementById('fCategory');
-    const fActive = document.getElementById('fActive');
-    const applyFilters = document.getElementById('applyFilters');
-
-    let currentTaskPage = 1;
-    const taskLimit = 10;
-    let totalTaskPages = 1;
-
-    async function loadTasks(page) {
-      try {
-        showLoading(true);
-        const params = new URLSearchParams();
-        params.set('page', page);
-        params.set('limit', taskLimit);
-        if (fCategory.value) params.set('category', fCategory.value);
-        if (fActive.value !== '') params.set('active', fActive.value);
-        const data = await api('/tasks/admin?' + params.toString());
-        const items = data.data.items || [];
-        const total = data.data.total || 0;
-        totalTaskPages = Math.max(1, Math.ceil(total / taskLimit));
-
-        taskRows.innerHTML = '';
-        for (const t of items) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${t.title}</td>
-            <td><span class="badge badge-grey">${t.category}</span></td>
-            <td>${t.price}</td>
-            <td>${t.reward_wallet}</td>
-            <td>${t.active ? '<span class="status-dot dot-green"></span>Active' : '<span class="status-dot dot-grey"></span>Inactive'}</td>
-            <td>${t.created_at}</td>
-            <td>
-              <button class="btn btn-muted" data-edit="${t.id}">✏️ Edit</button>
-              <button class="btn btn-danger" data-delete="${t.id}">🗑️ Delete</button>
-              <button class="btn btn-muted" data-toggle="${t.id}">${t.active ? '🔽 Deactivate' : '🔼 Activate'}</button>
-            </td>`;
-          taskRows.appendChild(tr);
+      
+      // Show active content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+        if (content.id === tabName) {
+          content.classList.add('active');
         }
-
-        // Bind actions
-        taskRows.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => onEditTask(btn.getAttribute('data-edit'))));
-        taskRows.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', () => onDeleteTask(btn.getAttribute('data-delete'))));
-        taskRows.querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => onToggleTask(btn.getAttribute('data-toggle'))));
-
-        currentTaskPage = page;
-        pageEl.textContent = String(currentTaskPage);
-        prevBtn.disabled = currentTaskPage <= 1;
-        nextBtn.disabled = currentTaskPage >= totalTaskPages;
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to load tasks'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    prevBtn.addEventListener('click', () => { if (currentTaskPage > 1) loadTasks(currentTaskPage - 1); });
-    nextBtn.addEventListener('click', () => { if (currentTaskPage < totalTaskPages) loadTasks(currentTaskPage + 1); });
-    applyFilters.addEventListener('click', () => loadTasks(1));
-
-    async function onEditTask(id) {
-      try {
-        const data = await api(`/tasks/${id}`);
-        const task = data.data;
-        document.getElementById('editForm').elements.editTitle.value = task.title;
-        document.getElementById('editForm').elements.editCategory.value = task.category;
-        document.getElementById('editForm').elements.editPrice.value = task.price;
-        document.getElementById('editForm').elements.editWallet.value = task.reward_wallet;
-        document.getElementById('editForm').elements.editInstructions.value = task.instructions || '';
-        document.getElementById('editForm').elements.editTargetUrl.value = task.target_url || '';
-        document.getElementById('editForm').elements.editImageUrl.value = task.image_url || '';
-        document.getElementById('editForm').elements.editActive.checked = task.active;
-        document.getElementById('editModal').style.display = 'flex';
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to load task'), 'error');
+      });
+      
+      currentTab = tabName;
+      
+      // Load data if needed
+      if (tabName === 'statistics') {
+        loadStatistics();
+      } else if (tabName === 'broadcast') {
+        loadBroadcasts();
       }
     }
 
-    async function onDeleteTask(id) {
-      if (!confirm('🗑️ Are you sure you want to delete this task?')) return;
-      try {
-        showLoading(true);
-        await api(`/tasks/${id}`, { method: 'DELETE' });
-        showMsg('✅ Task deleted successfully!', 'success');
-        await loadTasks(currentTaskPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to delete task'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    async function onToggleTask(id) {
-      try {
-        const row = Array.from(taskRows.querySelectorAll('button[data-toggle]')).find(b => b.getAttribute('data-toggle') === id).closest('tr');
-        const isActive = row.querySelector('td:nth-child(5)').textContent.trim().startsWith('Active');
-        showLoading(true);
-        await api(`/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !isActive }) });
-        showMsg(!isActive ? '✅ Task activated!' : '🔽 Task deactivated!', 'success');
-        await loadTasks(currentTaskPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to toggle task'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    // Edit form submission
-    document.getElementById('editForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const fd = new FormData(form);
-      const body = {
-        title: fd.get('editTitle'),
-        category: fd.get('editCategory'),
-        price: parseFloat(fd.get('editPrice') || '0'),
-        reward_wallet: fd.get('editWallet') || 'main',
-        instructions: fd.get('editInstructions') || '',
-        target_url: fd.get('editTargetUrl') || '',
-        image_url: fd.get('editImageUrl') || '',
-        active: form.elements.editActive.checked
-      };
-      try {
-        showLoading(true);
-        await api(`/tasks/${currentEditId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        showMsg('✅ Task updated successfully!', 'success');
-        closeModal();
-        await loadTasks(currentTaskPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to update task'), 'error');
-      } finally { showLoading(false); }
-    });
-
-    let currentEditId = null;
-
-    function closeModal() {
-      document.getElementById('editModal').style.display = 'none';
-    }
-
-    // Users functionality
-    const userRows = document.getElementById('userRows');
-    const userPrevBtn = document.getElementById('userPrevBtn');
-    const userNextBtn = document.getElementById('userNextBtn');
-    const userPageEl = document.getElementById('userPage');
-    const userSearch = document.getElementById('userSearch');
-    const userStatusFilter = document.getElementById('userStatusFilter');
-
-    let currentUserPage = 1;
-    const userLimit = 10;
-    let totalUserPages = 1;
-
-    async function loadUsers(page) {
-      try {
-        showLoading(true);
-        const params = new URLSearchParams();
-        params.set('page', page);
-        params.set('limit', userLimit);
-        if (userStatusFilter.value) params.set('status', userStatusFilter.value);
-        if (userSearch.value.trim()) params.set('search', userSearch.value.trim());
-        const data = await api('/admin/users?' + params.toString());
-        const items = data.data.items || [];
-        const total = data.data.total || 0;
-        totalUserPages = Math.max(1, Math.ceil(total / userLimit));
-
-        userRows.innerHTML = '';
-        for (const u of items) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${u.name}</td>
-            <td>${u.email}</td>
-            <td>${u.phone || '-'}</td>
-            <td>${u.balance.toFixed(2)}</td>
-            <td>${u.is_active ? '<span class="status-dot dot-green"></span>Active' : '<span class="status-dot dot-red"></span>Inactive'}</td>
-            <td>${u.country || '-'}</td>
-            <td>${u.created_at}</td>
-            <td>
-              ${u.is_active ?
-                `<button class="btn btn-warning" data-suspend="${u.id}">Suspend</button>` :
-                `<button class="btn btn-success" data-activate="${u.id}">Activate</button>`}
-            </td>`;
-          userRows.appendChild(tr);
+    // Load tasks from server
+    function loadTasks() {
+      showLoading();
+      const category = document.getElementById('fCategory').value;
+      const active = document.getElementById('fActive').value;
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Simulate API response
+        tasks = [
+          { id: 1, title: 'Watch TikTok Video (30 sec)', category: 'tiktok', price: 0.50, wallet: 'main', active: true, created_at: '2023-10-15', instructions: 'Watch the video for at least 30 seconds and like it.', target_url: 'https://tiktok.com/@user/video/123', image_url: 'https://example.com/image1.jpg' },
+          { id: 2, title: 'Subscribe to YouTube Channel', category: 'youtube', price: 1.20, wallet: 'youtube', active: true, created_at: '2023-10-14', instructions: 'Subscribe to the channel and watch at least one video.', target_url: 'https://youtube.com/channel/abc', image_url: 'https://example.com/image2.jpg' },
+          { id: 3, title: 'Share WhatsApp Status', category: 'whatsapp', price: 0.80, wallet: 'whatsapp', active: false, created_at: '2023-10-13', instructions: 'Share our status on your WhatsApp for 24 hours.', target_url: '', image_url: '' },
+          { id: 4, title: 'Facebook Ad Engagement', category: 'facebook', price: 0.75, wallet: 'main', active: true, created_at: '2023-10-12', instructions: 'Like and comment on our Facebook ad post.', target_url: 'https://facebook.com/post/123', image_url: 'https://example.com/image3.jpg' },
+          { id: 5, title: 'Instagram Story View', category: 'instagram', price: 0.60, wallet: 'instagram', active: true, created_at: '2023-10-11', instructions: 'View our Instagram story for full duration.', target_url: 'https://instagram.com/story/123', image_url: '' },
+        ];
+        
+        // Apply filters
+        let filteredTasks = tasks;
+        if (category) {
+          filteredTasks = filteredTasks.filter(task => task.category === category);
         }
-
-        // Bind actions
-        userRows.querySelectorAll('[data-suspend]').forEach(btn => btn.addEventListener('click', () => onSuspendUser(btn.getAttribute('data-suspend'))));
-        userRows.querySelectorAll('[data-activate]').forEach(btn => btn.addEventListener('click', () => onActivateUser(btn.getAttribute('data-activate'))));
-
-        currentUserPage = page;
-        userPageEl.textContent = String(currentUserPage);
-        userPrevBtn.disabled = currentUserPage <= 1;
-        userNextBtn.disabled = currentUserPage >= totalUserPages;
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to load users'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    userPrevBtn.addEventListener('click', () => { if (currentUserPage > 1) loadUsers(currentUserPage - 1); });
-    userNextBtn.addEventListener('click', () => { if (currentUserPage < totalUserPages) loadUsers(currentUserPage + 1); });
-    userSearch.addEventListener('input', () => loadUsers(1));
-    userStatusFilter.addEventListener('change', () => loadUsers(1));
-
-    async function onSuspendUser(id) {
-      if (!confirm('⚠️ Are you sure you want to suspend this user?')) return;
-      try {
-        showLoading(true);
-        await api(`/admin/users/${id}/suspend`, { method: 'POST' });
-        showMsg('✅ User suspended successfully!', 'success');
-        await loadUsers(currentUserPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to suspend user'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    async function onActivateUser(id) {
-      if (!confirm('✅ Are you sure you want to activate this user?')) return;
-      try {
-        showLoading(true);
-        await api(`/admin/users/${id}/activate`, { method: 'POST' });
-        showMsg('✅ User activated successfully!', 'success');
-        await loadUsers(currentUserPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to activate user'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    // Withdrawals functionality
-    const withdrawalRows = document.getElementById('withdrawalRows');
-    const withdrawalPrevBtn = document.getElementById('withdrawalPrevBtn');
-    const withdrawalNextBtn = document.getElementById('withdrawalNextBtn');
-    const withdrawalPageEl = document.getElementById('withdrawalPage');
-    const withdrawalStatusFilter = document.getElementById('withdrawalStatusFilter');
-
-    let currentWithdrawalPage = 1;
-    const withdrawalLimit = 10;
-    let totalWithdrawalPages = 1;
-
-    async function loadWithdrawals(page) {
-      try {
-        showLoading(true);
-        const params = new URLSearchParams();
-        params.set('page', page);
-        params.set('limit', withdrawalLimit);
-        if (withdrawalStatusFilter.value) params.set('status', withdrawalStatusFilter.value);
-        const data = await api('/admin/withdrawals?' + params.toString());
-        const items = data.data.items || [];
-        const total = data.data.total || 0;
-        totalWithdrawalPages = Math.max(1, Math.ceil(total / withdrawalLimit));
-
-        withdrawalRows.innerHTML = '';
-        for (const w of items) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${w.user_name}</td>
-            <td>${w.amount.toFixed(2)}</td>
-            <td>${w.method}</td>
-            <td>${w.status === 'pending' ? '<span class="status-dot dot-yellow"></span>Pending' : w.status === 'approved' ? '<span class="status-dot dot-green"></span>Approved' : '<span class="status-dot dot-red"></span>Rejected'}</td>
-            <td>${w.created_at}</td>
-            <td>
-              ${w.status === 'pending' ? `
-                <button class="btn btn-success" data-approve="${w.id}">Approve</button>
-                <button class="btn btn-danger" data-reject="${w.id}">Reject</button>
-              ` : ''}
-            </td>`;
-          withdrawalRows.appendChild(tr);
+        if (active !== '') {
+          const isActive = active === 'true';
+          filteredTasks = filteredTasks.filter(task => task.active === isActive);
         }
-
-        // Bind actions
-        withdrawalRows.querySelectorAll('[data-approve]').forEach(btn => btn.addEventListener('click', () => onApproveWithdrawal(btn.getAttribute('data-approve'))));
-        withdrawalRows.querySelectorAll('[data-reject]').forEach(btn => btn.addEventListener('click', () => onRejectWithdrawal(btn.getAttribute('data-reject'))));
-
-        currentWithdrawalPage = page;
-        withdrawalPageEl.textContent = String(currentWithdrawalPage);
-        withdrawalPrevBtn.disabled = currentWithdrawalPage <= 1;
-        withdrawalNextBtn.disabled = currentWithdrawalPage >= totalWithdrawalPages;
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to load withdrawals'), 'error');
-      } finally { showLoading(false); }
+        
+        renderTasks(filteredTasks);
+        hideLoading();
+        showFeedback('Tasks loaded successfully', 'success');
+      }, 800);
     }
 
-    withdrawalPrevBtn.addEventListener('click', () => { if (currentWithdrawalPage > 1) loadWithdrawals(currentWithdrawalPage - 1); });
-    withdrawalNextBtn.addEventListener('click', () => { if (currentWithdrawalPage < totalWithdrawalPages) loadWithdrawals(currentWithdrawalPage + 1); });
-    withdrawalStatusFilter.addEventListener('change', () => loadWithdrawals(1));
-
-    async function onApproveWithdrawal(id) {
-      if (!confirm('✅ Approve this withdrawal request?')) return;
-      try {
-        showLoading(true);
-        await api(`/admin/withdrawals/${id}/approve`, { method: 'POST' });
-        showMsg('✅ Withdrawal approved!', 'success');
-        await loadWithdrawals(currentWithdrawalPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to approve withdrawal'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    async function onRejectWithdrawal(id) {
-      const reason = prompt('Please provide a reason for rejection:', 'Request rejected by admin');
-      if (reason === null) return;
-      try {
-        showLoading(true);
-        await api(`/admin/withdrawals/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
-        showMsg('✅ Withdrawal rejected!', 'success');
-        await loadWithdrawals(currentWithdrawalPage);
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to reject withdrawal'), 'error');
-      } finally { showLoading(false); }
-    }
-
-    // Statistics functionality
-    const statsGrid = document.getElementById('statsGrid');
-    const detailedStats = document.getElementById('detailedStats');
-
-    async function loadStatistics() {
-      try {
-        showLoading(true);
-        const data = await api('/admin/statistics');
-        const stats = data.data.overview;
-
-        statsGrid.innerHTML = `
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_users}</div>
-            <div class="stat-label">Total Users</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.active_users}</div>
-            <div class="stat-label">Active Users</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.inactive_users}</div>
-            <div class="stat-label">Inactive Users</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_deposits}</div>
-            <div class="stat-label">Total Deposits</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_withdrawals}</div>
-            <div class="stat-label">Total Withdrawals</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.pending_withdrawals}</div>
-            <div class="stat-label">Pending Withdrawals</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_deposit_amount.toFixed(2)}</div>
-            <div class="stat-label">Total Deposit Amount</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_withdrawal_amount.toFixed(2)}</div>
-            <div class="stat-label">Total Withdrawal Amount</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.platform_balance.toFixed(2)}</div>
-            <div class="stat-label">Platform Balance</div>
-          </div>
+    // Render tasks to the table
+    function renderTasks(tasks) {
+      const tbody = document.getElementById('taskRows');
+      tbody.innerHTML = '';
+      
+      if (tasks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No tasks found</td></tr>`;
+        return;
+      }
+      
+      tasks.forEach(task => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${task.title}</td>
+          <td><span class="badge badge-${getCategoryBadge(task.category)}">${getCategoryIcon(task.category)} ${task.category}</span></td>
+          <td>$${task.price.toFixed(2)}</td>
+          <td><span class="badge badge-blue">${task.wallet}</span></td>
+          <td><span class="status-dot ${task.active ? 'dot-green' : 'dot-grey'}"></span> ${task.active ? 'Active' : 'Inactive'}</td>
+          <td>${task.created_at}</td>
+          <td>
+            <button class="btn btn-secondary" onclick="editTask(${task.id})"><i class="fa-solid fa-pen"></i> Edit</button>
+            <button class="btn ${task.active ? 'btn-warning' : 'btn-success'}" onclick="toggleTask(${task.id}, ${!task.active})">
+              <i class="fa-solid fa-toggle-${task.active ? 'on' : 'off'}"></i> ${task.active ? 'Deactivate' : 'Activate'}
+            </button>
+            <button class="btn btn-danger" onclick="deleteTask(${task.id})"><i class="fa-solid fa-trash"></i> Delete</button>
+          </td>
         `;
-
-        detailedStats.innerHTML = `
-          <p>More detailed statistics can be added here as needed.</p>
-        `;
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to load statistics'), 'error');
-      } finally { showLoading(false); }
+        tbody.appendChild(row);
+      });
     }
 
-    // Broadcast functionality
-    const notificationForm = document.getElementById('notificationForm');
-    const emailForm = document.getElementById('emailForm');
-
-    notificationForm.addEventListener('submit', async (e) => {
+    // Create a new task
+    function createTask(e) {
       e.preventDefault();
-      const fd = new FormData(notificationForm);
-      const body = {
-        title: fd.get('notificationTitle'),
-        message: fd.get('notificationMessage'),
-        type: fd.get('notificationType')
-      };
-      try {
-        showLoading(true);
-        await api('/admin/notifications/broadcast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        showMsg('📢 Notification broadcast sent!', 'success');
-        notificationForm.reset();
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to send notification'), 'error');
-      } finally { showLoading(false); }
-    });
+      showLoading();
+      
+      const formData = new FormData(e.target);
+      const active = document.getElementById('activeInput').checked;
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        const newTask = {
+          id: tasks.length + 1,
+          title: formData.get('title'),
+          category: formData.get('category'),
+          price: parseFloat(formData.get('price')),
+          wallet: formData.get('reward_wallet'),
+          active: active,
+          instructions: formData.get('instructions'),
+          target_url: formData.get('target_url'),
+          image_url: formData.get('image_url'),
+          created_at: new Date().toISOString().split('T')[0]
+        };
+        
+        tasks.unshift(newTask);
+        renderTasks(tasks);
+        e.target.reset();
+        hideLoading();
+        showFeedback('Task created successfully', 'success');
+      }, 1000);
+    }
 
-    emailForm.addEventListener('submit', async (e) => {
+    // Edit task - open modal
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      
+      document.getElementById('editTaskId').value = task.id;
+      document.getElementById('editTaskTitle').value = task.title;
+      document.getElementById('editTaskCategory').value = task.category;
+      document.getElementById('editTaskPrice').value = task.price;
+      document.getElementById('editTaskWallet').value = task.wallet;
+      document.getElementById('editTaskInstructions').value = task.instructions;
+      document.getElementById('editTaskTargetUrl').value = task.target_url;
+      document.getElementById('editTaskImageUrl').value = task.image_url;
+      document.getElementById('editTaskActive').checked = task.active;
+      
+      openModal('editTaskModal');
+    }
+
+    // Update task
+    function updateTask(e) {
       e.preventDefault();
-      const fd = new FormData(emailForm);
-      const filter = {};
-      if (fd.get('emailCountry')) filter.country = fd.get('emailCountry');
-      if (fd.get('emailCurrency')) filter.currency = fd.get('emailCurrency');
-      if (fd.get('emailStatus')) filter.status = fd.get('emailStatus');
-      const body = {
-        subject: fd.get('emailSubject'),
-        message: fd.get('emailMessage'),
-        filter
+      showLoading();
+      
+      const formData = new FormData(e.target);
+      const id = parseInt(formData.get('id'));
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        const taskIndex = tasks.findIndex(t => t.id === id);
+        if (taskIndex !== -1) {
+          tasks[taskIndex] = {
+            ...tasks[taskIndex],
+            title: formData.get('title'),
+            category: formData.get('category'),
+            price: parseFloat(formData.get('price')),
+            wallet: formData.get('reward_wallet'),
+            instructions: formData.get('instructions'),
+            target_url: formData.get('target_url'),
+            image_url: formData.get('image_url'),
+            active: document.getElementById('editTaskActive').checked
+          };
+          
+          renderTasks(tasks);
+          closeModal('editTaskModal');
+          hideLoading();
+          showFeedback('Task updated successfully', 'success');
+        }
+      }, 800);
+    }
+
+    // Toggle task status
+    function toggleTask(id, active) {
+      showLoading();
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        const taskIndex = tasks.findIndex(t => t.id === id);
+        if (taskIndex !== -1) {
+          tasks[taskIndex].active = active;
+          renderTasks(tasks);
+          hideLoading();
+          showFeedback(`Task ${active ? 'activated' : 'deactivated'} successfully`, 'success');
+        }
+      }, 800);
+    }
+
+    // Delete task
+    function deleteTask(id) {
+      if (!confirm('Are you sure you want to delete this task?')) return;
+      
+      showLoading();
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        tasks = tasks.filter(t => t.id !== id);
+        renderTasks(tasks);
+        hideLoading();
+        showFeedback('Task deleted successfully', 'success');
+      }, 800);
+    }
+
+    // Load users from server
+    function loadUsers() {
+      showLoading();
+      const search = document.getElementById('userSearch').value;
+      const status = document.getElementById('userStatusFilter').value;
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Simulate API response
+        users = [
+          { id: 1, name: 'John Doe', email: 'john@example.com', phone: '+1234567890', balance: 25.50, status: 'active', country: 'United States', joined: '2023-09-15' },
+          { id: 2, name: 'Jane Smith', email: 'jane@example.com', phone: '+0987654321', balance: 12.75, status: 'active', country: 'Canada', joined: '2023-09-20' },
+          { id: 3, name: 'Robert Johnson', email: 'robert@example.com', phone: '+1122334455', balance: 8.20, status: 'inactive', country: 'United Kingdom', joined: '2023-10-01' },
+          { id: 4, name: 'Maria Garcia', email: 'maria@example.com', phone: '+5566778899', balance: 42.30, status: 'active', country: 'Spain', joined: '2023-10-05' },
+          { id: 5, name: 'Ahmed Hassan', email: 'ahmed@example.com', phone: '+9988776655', balance: 3.50, status: 'inactive', country: 'Egypt', joined: '2023-10-10' },
+        ];
+        
+        // Apply filters
+        let filteredUsers = users;
+        if (search) {
+          const searchLower = search.toLowerCase();
+          filteredUsers = filteredUsers.filter(user => 
+            user.name.toLowerCase().includes(searchLower) || 
+            user.email.toLowerCase().includes(searchLower)
+          );
+        }
+        if (status) {
+          filteredUsers = filteredUsers.filter(user => user.status === status);
+        }
+        
+        renderUsers(filteredUsers);
+        hideLoading();
+      }, 800);
+    }
+
+    // Render users to the table
+    function renderUsers(users) {
+      const tbody = document.getElementById('userRows');
+      tbody.innerHTML = '';
+      
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No users found</td></tr>`;
+        return;
+      }
+      
+      users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${user.name}</td>
+          <td>${user.email}</td>
+          <td>${user.phone}</td>
+          <td>$${user.balance.toFixed(2)}</td>
+          <td><span class="badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}">${user.status}</span></td>
+          <td>${user.country}</td>
+          <td>${user.joined}</td>
+          <td>
+            <button class="btn btn-secondary" onclick="viewUser(${user.id})"><i class="fa-solid fa-eye"></i> View</button>
+            <button class="btn ${user.status === 'active' ? 'btn-warning' : 'btn-success'}" onclick="toggleUserStatus(${user.id}, '${user.status === 'active' ? 'inactive' : 'active'}')">
+              <i class="fa-solid fa-user-${user.status === 'active' ? 'slash' : 'check'}"></i> ${user.status === 'active' ? 'Deactivate' : 'Activate'}
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // View user details
+    function viewUser(id) {
+      const user = users.find(u => u.id === id);
+      if (!user) return;
+      
+      alert(`User Details:\nName: ${user.name}\nEmail: ${user.email}\nPhone: ${user.phone}\nBalance: $${user.balance.toFixed(2)}\nStatus: ${user.status}\nCountry: ${user.country}\nJoined: ${user.joined}`);
+    }
+
+    // Toggle user status
+    function toggleUserStatus(id, status) {
+      showLoading();
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        const userIndex = users.findIndex(u => u.id === id);
+        if (userIndex !== -1) {
+          users[userIndex].status = status;
+          renderUsers(users);
+          hideLoading();
+          showFeedback(`User ${status === 'active' ? 'activated' : 'deactivated'} successfully`, 'success');
+        }
+      }, 800);
+    }
+
+    // Load withdrawals from server
+    function loadWithdrawals() {
+      showLoading();
+      const status = document.getElementById('withdrawalStatusFilter').value;
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Simulate API response
+        withdrawals = [
+          { id: 1, user: 'John Doe', amount: 20.00, wallet: 'PayPal', address: 'john@example.com', status: 'pending', requested: '2023-10-15' },
+          { id: 2, user: 'Jane Smith', amount: 10.50, wallet: 'Bitcoin', address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', status: 'approved', requested: '2023-10-14' },
+          { id: 3, user: 'Robert Johnson', amount: 5.00, wallet: 'Ethereum', address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e', status: 'rejected', requested: '2023-10-13' },
+          { id: 4, user: 'Maria Garcia', amount: 30.00, wallet: 'Bank Transfer', address: 'XXXX-XXXX-XXXX-1234', status: 'pending', requested: '2023-10-12' },
+          { id: 5, user: 'Ahmed Hassan', amount: 15.75, wallet: 'Skrill', address: 'ahmed@example.com', status: 'pending', requested: '2023-10-11' },
+        ];
+        
+        // Apply filters
+        let filteredWithdrawals = withdrawals;
+        if (status) {
+          filteredWithdrawals = filteredWithdrawals.filter(withdrawal => withdrawal.status === status);
+        }
+        
+        renderWithdrawals(filteredWithdrawals);
+        hideLoading();
+      }, 800);
+    }
+
+    // Render withdrawals to the table
+    function renderWithdrawals(withdrawals) {
+      const tbody = document.getElementById('withdrawalRows');
+      tbody.innerHTML = '';
+      
+      if (withdrawals.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No withdrawals found</td></tr>`;
+        return;
+      }
+      
+      withdrawals.forEach(withdrawal => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${withdrawal.user}</td>
+          <td>$${withdrawal.amount.toFixed(2)}</td>
+          <td>${withdrawal.wallet}</td>
+          <td>${withdrawal.address}</td>
+          <td><span class="badge ${getWithdrawalStatusBadge(withdrawal.status)}">${withdrawal.status}</span></td>
+          <td>${withdrawal.requested}</td>
+          <td>
+            ${withdrawal.status === 'pending' ? `
+              <button class="btn btn-success" onclick="updateWithdrawal(${withdrawal.id}, 'approved')"><i class="fa-solid fa-check"></i> Approve</button>
+              <button class="btn btn-danger" onclick="updateWithdrawal(${withdrawal.id}, 'rejected')"><i class="fa-solid fa-xmark"></i> Reject</button>
+            ` : `
+              <button class="btn btn-secondary" onclick="viewWithdrawal(${withdrawal.id})"><i class="fa-solid fa-eye"></i> View</button>
+            `}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Update withdrawal status
+    function updateWithdrawal(id, status) {
+      showLoading();
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        const withdrawalIndex = withdrawals.findIndex(w => w.id === id);
+        if (withdrawalIndex !== -1) {
+          withdrawals[withdrawalIndex].status = status;
+          renderWithdrawals(withdrawals);
+          hideLoading();
+          showFeedback(`Withdrawal ${status} successfully`, 'success');
+        }
+      }, 800);
+    }
+
+    // View withdrawal details
+    function viewWithdrawal(id) {
+      const withdrawal = withdrawals.find(w => w.id === id);
+      if (!withdrawal) return;
+      
+      alert(`Withdrawal Details:\nUser: ${withdrawal.user}\nAmount: $${withdrawal.amount.toFixed(2)}\nWallet: ${withdrawal.wallet}\nAddress: ${withdrawal.address}\nStatus: ${withdrawal.status}\nRequested: ${withdrawal.requested}`);
+    }
+
+    // Load statistics
+    function loadStatistics() {
+      showLoading();
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Simulate API response
+        document.getElementById('totalUsers').textContent = '1,254';
+        document.getElementById('activeUsers').textContent = '892';
+        document.getElementById('totalTasks').textContent = '156';
+        document.getElementById('activeTasks').textContent = '128';
+        document.getElementById('totalWithdrawals').textContent = '342';
+        document.getElementById('pendingWithdrawals').textContent = '23';
+        document.getElementById('totalPayout').textContent = '$5,342.75';
+        document.getElementById('platformProfit').textContent = '$1,245.30';
+        
+        // In a real app, we would render charts here
+        hideLoading();
+      }, 1000);
+    }
+
+    // Load broadcasts
+    function loadBroadcasts() {
+      showLoading();
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Simulate API response
+        broadcasts = [
+          { id: 1, title: 'System Maintenance', target: 'all', type: 'info', sent_by: 'Admin', date: '2023-10-15', views: '1,254' },
+          { id: 2, title: 'New Tasks Available', target: 'active', type: 'update', sent_by: 'Admin', date: '2023-10-14', views: '892' },
+          { id: 3, title: 'Withdrawal Processing Delay', target: 'withdrawals', type: 'warning', sent_by: 'Admin', date: '2023-10-13', views: '342' },
+          { id: 4, title: 'New Feature Announcement', target: 'all', type: 'important', sent_by: 'Admin', date: '2023-10-12', views: '1,102' },
+        ];
+        
+        renderBroadcasts(broadcasts);
+        hideLoading();
+      }, 800);
+    }
+
+    // Render broadcasts to the table
+    function renderBroadcasts(broadcasts) {
+      const tbody = document.getElementById('broadcastRows');
+      tbody.innerHTML = '';
+      
+      if (broadcasts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No broadcasts found</td></tr>`;
+        return;
+      }
+      
+      broadcasts.forEach(broadcast => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${broadcast.title}</td>
+          <td><span class="badge badge-blue">${broadcast.target}</span></td>
+          <td><span class="badge ${getBroadcastTypeBadge(broadcast.type)}">${broadcast.type}</span></td>
+          <td>${broadcast.sent_by}</td>
+          <td>${broadcast.date}</td>
+          <td>${broadcast.views}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Send broadcast message
+    function sendBroadcast(e) {
+      e.preventDefault();
+      showLoading();
+      
+      const formData = new FormData(e.target);
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        const newBroadcast = {
+          id: broadcasts.length + 1,
+          title: formData.get('title'),
+          target: formData.get('target'),
+          type: formData.get('type'),
+          sent_by: 'Admin',
+          date: new Date().toISOString().split('T')[0],
+          views: '0'
+        };
+        
+        broadcasts.unshift(newBroadcast);
+        renderBroadcasts(broadcasts);
+        e.target.reset();
+        hideLoading();
+        showFeedback('Broadcast sent successfully', 'success');
+      }, 1000);
+    }
+
+    // Helper functions
+    function getCategoryIcon(category) {
+      const icons = {
+        'tiktok': 'fa-brands fa-tiktok',
+        'youtube': 'fa-brands fa-youtube',
+        'whatsapp': 'fa-brands fa-whatsapp',
+        'facebook': 'fa-brands fa-facebook',
+        'instagram': 'fa-brands fa-instagram',
+        'ads': 'fa-solid fa-ad',
+        'blogs': 'fa-solid fa-blog',
+        'trivia': 'fa-solid fa-question'
       };
-      try {
-        showLoading(true);
-        await api('/admin/email/broadcast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        showMsg('📧 Email broadcast sent!', 'success');
-        emailForm.reset();
-      } catch (err) {
-        showMsg('❌ ' + (err.message || 'Failed to send email'), 'error');
-      } finally { showLoading(false); }
-    });
+      return `<i class="${icons[category] || 'fa-solid fa-tasks'}"></i>`;
+    }
 
-    // Logout functionality
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('token');
-      window.location.href = '/frontend/auth/login.php';
-    });
+    function getCategoryBadge(category) {
+      const badges = {
+        'tiktok': 'purple',
+        'youtube': 'red',
+        'whatsapp': 'green',
+        'facebook': 'blue',
+        'instagram': 'pink',
+        'ads': 'yellow',
+        'blogs': 'blue',
+        'trivia': 'grey'
+      };
+      return badges[category] || 'grey';
+    }
 
-    // Initial load
-    loadTasks(1);
+    function getWithdrawalStatusBadge(status) {
+      const badges = {
+        'pending': 'yellow',
+        'approved': 'green',
+        'rejected': 'red'
+      };
+      return badges[status] || 'grey';
+    }
+
+    function getBroadcastTypeBadge(type) {
+      const badges = {
+        'info': 'blue',
+        'warning': 'yellow',
+        'important': 'red',
+        'update': 'green'
+      };
+      return badges[type] || 'grey';
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      if (currentPage < 1) currentPage = 1;
+      document.getElementById('page').textContent = currentPage;
+      loadTasks();
+    }
+
+    function changeUserPage(delta) {
+      currentPage += delta;
+      if (currentPage < 1) currentPage = 1;
+      document.getElementById('userPage').textContent = currentPage;
+      loadUsers();
+    }
+
+    function changeWithdrawalPage(delta) {
+      currentPage += delta;
+      if (currentPage < 1) currentPage = 1;
+      document.getElementById('withdrawalPage').textContent = currentPage;
+      loadWithdrawals();
+    }
+
+    function changeBroadcastPage(delta) {
+      currentPage += delta;
+      if (currentPage < 1) currentPage = 1;
+      document.getElementById('broadcastPage').textContent = currentPage;
+      loadBroadcasts();
+    }
+
+    function openModal(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function showLoading() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to log out?')) {
+        showLoading();
+        // In a real app, this would call the logout API
+        setTimeout(() => {
+          window.location.href = '/frontend/auth/login.php';
+        }, 800);
+      }
+    }
+
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Enhanced Feedback System
+    function showFeedback(message, type = 'info', title = null) {
+      const container = document.getElementById('feedbackContainer');
+      
+      // Set title based on type if not provided
+      if (!title) {
+        switch (type) {
+          case 'success': title = 'Success'; break;
+          case 'error': title = 'Error'; break;
+          case 'warning': title = 'Warning'; break;
+          default: title = 'Information';
+        }
+      }
+      
+      // Set icon based on type
+      let icon;
+      switch (type) {
+        case 'success': icon = 'fa-circle-check'; break;
+        case 'error': icon = 'fa-circle-exclamation'; break;
+        case 'warning': icon = 'fa-triangle-exclamation'; break;
+        default: icon = 'fa-circle-info';
+      }
+      
+      const toast = document.createElement('div');
+      toast.className = `feedback-toast ${type}`;
+      toast.innerHTML = `
+        <div class="feedback-toast-icon"><i class="fa-solid ${icon}"></i></div>
+        <div class="feedback-toast-content">
+          <div class="feedback-toast-title">${title}</div>
+          <div class="feedback-toast-message">${message}</div>
+        </div>
+        <button class="feedback-toast-close" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+        <div class="feedback-toast-progress"><div class="feedback-toast-progress-bar"></div></div>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Remove toast after animation completes
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.remove();
+        }
+      }, 3000);
+    }
   </script>
 </body>
 </html>

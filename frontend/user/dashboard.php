@@ -324,6 +324,53 @@
     }
   }
 
+  /* Task styles */
+  .task-card {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .task-video {
+    width: 100%;
+    border-radius: 8px;
+    aspect-ratio: 16/9;
+  }
+  
+  .task-completed {
+    opacity: 0.7;
+    border-left: 4px solid #38a169;
+  }
+  
+  /* Payment modal */
+  .payment-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .payment-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
   /* Responsive media queries */
   @media screen and (max-width: 768px) {
     .app-container {
@@ -400,6 +447,49 @@
 
 <!-- Feedback Toast Container -->
 <div class="feedback-container" id="feedbackContainer"></div>
+
+<!-- Payment Modal -->
+<div class="payment-modal" id="paymentModal">
+  <div class="payment-modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">Make a Deposit</h3>
+      <button class="text-gray-500 hover:text-gray-700" id="closePaymentModal">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <div id="paymentForm">
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Amount</label>
+        <input type="number" id="depositAmount" class="w-full p-2 border border-gray-300 rounded" placeholder="Enter amount" min="1" required>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Currency</label>
+        <select id="depositCurrency" class="w-full p-2 border border-gray-300 rounded">
+          <option value="USD">USD ($)</option>
+          <option value="KES">KES (KSh)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
+        </select>
+      </div>
+      <button id="initiatePayment" class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+        Proceed to Payment
+      </button>
+    </div>
+    <div id="paymentProcessing" class="hidden text-center">
+      <div class="loader-spinner mx-auto mb-4"></div>
+      <p>Processing payment...</p>
+    </div>
+    <div id="paymentSuccess" class="hidden text-center text-green-600">
+      <i class="fa-solid fa-check-circle text-4xl mb-2"></i>
+      <p class="font-semibold">Payment initiated successfully!</p>
+      <p class="text-sm">Redirecting to payment gateway...</p>
+    </div>
+    <div id="paymentError" class="hidden text-center text-red-600">
+      <i class="fa-solid fa-exclamation-circle text-4xl mb-2"></i>
+      <p class="font-semibold" id="paymentErrorMsg"></p>
+    </div>
+  </div>
+</div>
 
 <!-- Fixed Top Header -->
 <header class="topbar fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 shadow-md">
@@ -665,6 +755,8 @@
     // State management
     let authToken = localStorage.getItem('authToken');
     let currentUser = null;
+    let completedTasks = new Set();
+    let currentPage = 'dashboard';
 
     document.addEventListener('DOMContentLoaded', () => {
         // Enhanced feedback system
@@ -849,155 +941,96 @@
                             </div>
                         </div>
                         
-                            <!-- Earnings Cards Section - Restored to original design -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
-                                <!-- Total Earnings Card -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Total Earnings</h2>
-                                            <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-green-600" id="totalEarnings">$${dashboardData.totalEarnings}</p>
-                                        </div>
-                                        <div class="text-4xl text-green-500">
-                                            <i class="fa-solid fa-sack-dollar"></i>
-                                        </div>
+                        <!-- Earnings Cards Section - Restored to original design -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+                            <!-- Total Earnings Card -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Total Earnings</h2>
+                                        <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-green-600" id="totalEarnings">$${dashboardData.totalEarnings}</p>
                                     </div>
-                                    <div class="mt-4 sm:mt-6">
-                                        <div class="flex items-center justify-between text-sm sm:text-base">
-                                            <span class="text-gray-600">Available Balance</span>
-                                            <span class="font-semibold text-green-600" id="availableBalance">$${dashboardData.availableBalance}</span>
-                                        </div>
+                                    <div class="text-4xl text-green-500">
+                                        <i class="fa-solid fa-sack-dollar"></i>
                                     </div>
                                 </div>
-                                
-                                <!-- Referral Earnings Card -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Referral Earnings</h2>
-                                            <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-blue-600" id="referralEarnings">$${dashboardData.referralEarnings}</p>
-                                        </div>
-                                        <div class="text-4xl text-blue-500">
-                                            <i class="fa-solid fa-users"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 sm:mt-6">
-                                        <div class="flex items-center justify-between text-sm sm:text-base">
-                                            <span class="text-gray-600">Total Referrals</span>
-                                            <span class="font-semibold text-blue-600" id="totalReferrals">${dashboardData.totalReferrals}</span>
-                                        </div>
+                                <div class="mt-4 sm:mt-6">
+                                    <div class="flex items-center justify-between text-sm sm:text-base">
+                                        <span class="text-gray-600">Available Balance</span>
+                                        <span class="font-semibold text-green-600" id="availableBalance">$${dashboardData.balance}</span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <!-- Wallet Cards Section - Restored to original design -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                                <!-- YouTube Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">YouTube Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-red-600" id="youtubeWallet">$${dashboardData.youtubeWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-red-500">
-                                            <i class="fa-brands fa-youtube"></i>
-                                        </div>
+                            <!-- Referral Earnings Card -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Referral Earnings</h2>
+                                        <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-blue-600" id="referralEarnings">$${dashboardData.affiliateEarnings}</p>
                                     </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-red-600 text-white rounded-full py-2 px-4 hover:bg-red-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
+                                    <div class="text-4xl text-blue-500">
+                                        <i class="fa-solid fa-users"></i>
                                     </div>
                                 </div>
-                                
-                                <!-- TikTok Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">TikTok Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-blue-600" id="tiktokWallet">$${dashboardData.tiktokWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-blue-500">
-                                            <i class="fa-brands fa-tiktok"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-blue-600 text-white rounded-full py-2 px-4 hover:bg-blue-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <!-- Trivia Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Trivia Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-purple-600" id="triviaWallet">$${dashboardData.triviaWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-purple-500">
-                                            <i class="fa-solid fa-question"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-purple-600 text-white rounded-full py-2 px-4 hover:bg-purple-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <!-- Games Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Games Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-orange-600" id="gamesWallet">$${dashboardData.gamesWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-orange-500">
-                                            <i class="fa-solid fa-gamepad"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-orange-600 text-white rounded-full py-2 px-4 hover:bg-orange-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
+                                <div class="mt-4 sm:mt-6">
+                                    <div class="flex items-center justify-between text-sm sm:text-base">
+                                        <span class="text-gray-600">Affiliate Link</span>
+                                        <button onclick="copyAffiliateLink('${dashboardData.affiliateLink}')" class="text-blue-600 hover:text-blue-800 text-xs">
+                                            Copy Link
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Recent Activity Section -->
-                            <div class="bg-white rounded-3xl shadow-lg p-6 sm:p-8 transform transition-all duration-500 hover:shadow-xl">
-                                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Recent Activity</h2>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full">
-                                        <thead>
-                                            <tr class="border-b">
-                                                <th class="text-left py-2 px-4">Date</th>
-                                                <th class="text-left py-2 px-4">Activity</th>
-                                                <th class="text-left py-2 px-4">Amount</th>
-                                                <th class="text-left py-2 px-4">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentActivity">
-                                            ${dashboardData.recentActivity.map(activity => `
-                                                <tr class="border-b hover:bg-gray-50">
-                                                    <td class="py-3 px-4">${activity.date}</td>
-                                                    <td class="py-3 px-4">${activity.description}</td>
-                                                    <td class="py-3 px-4">$${activity.amount}</td>
-                                                    <td class="py-3 px-4">
-                                                        <span class="px-2 py-1 rounded-full text-xs ${activity.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                                                            ${activity.status}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
+                        </div>
+                        
+                        <!-- Tasks Section -->
+                        <div class="bg-white rounded-3xl shadow-lg p-6 mb-8">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-800">Available Tasks</h2>
+                                <button onclick="loadTasks()" class="bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700">
+                                    <i class="fa-solid fa-rotate"></i> Refresh Tasks
+                                </button>
+                            </div>
+                            <div id="tasksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <!-- Tasks will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Activity Section -->
+                        <div class="bg-white rounded-3xl shadow-lg p-6 sm:p-8 transform transition-all duration-500 hover:shadow-xl">
+                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Recent Activity</h2>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b">
+                                            <th class="text-left py-2 px-4">Date</th>
+                                            <th class="text-left py-2 px-4">Activity</th>
+                                            <th class="text-left py-2 px-4">Amount</th>
+                                            <th class="text-left py-2 px-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentActivity">
+                                        <tr class="border-b hover:bg-gray-50">
+                                            <td class="py-3 px-4">Loading...</td>
+                                            <td class="py-3 px-4">Loading activities</td>
+                                            <td class="py-3 px-4">$0.00</td>
+                                            <td class="py-3 px-4">
+                                                <span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                                                    Loading
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 `;
+                
+                // Load tasks and recent activity
+                await loadTasks();
+                await loadRecentActivity();
                 
                 showFeedback('Dashboard loaded successfully', 'success');
             } catch (error) {
@@ -1011,6 +1044,271 @@
                         </button>
                     </div>
                 `;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        // Load tasks from API
+        async function loadTasks() {
+            try {
+                const tasksResponse = await apiCall('/tasks');
+                if (!tasksResponse) return;
+                
+                const tasksContainer = document.getElementById('tasksContainer');
+                tasksContainer.innerHTML = '';
+                
+                if (tasksResponse.tasks && tasksResponse.tasks.length > 0) {
+                    tasksResponse.tasks.forEach(task => {
+                        const isCompleted = completedTasks.has(task._id);
+                        
+                        const taskCard = document.createElement('div');
+                        taskCard.className = `task-card bg-white rounded-lg shadow-md p-4 ${isCompleted ? 'task-completed' : ''}`;
+                        taskCard.innerHTML = `
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="font-semibold text-lg">${task.title}</h3>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">$${task.price}</span>
+                            </div>
+                            
+                            ${task.image_url ? `
+                                <img src="${task.image_url}" alt="${task.title}" class="w-full h-40 object-cover rounded mb-3">
+                            ` : ''}
+                            
+                            ${task.target_url ? `
+                                <div class="mb-3">
+                                    <a href="${task.target_url}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
+                                        <i class="fa-solid fa-link"></i> Visit target URL
+                                    </a>
+                                </div>
+                            ` : ''}
+                            
+                            ${task.instructions ? `
+                                <p class="text-sm text-gray-600 mb-3">${task.instructions}</p>
+                            ` : ''}
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500">${task.category}</span>
+                                <button onclick="completeTask('${task._id}')" 
+                                    class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 ${isCompleted ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    ${isCompleted ? 'disabled' : ''}>
+                                    ${isCompleted ? 'Completed' : 'Complete Task'}
+                                </button>
+                            </div>
+                        `;
+                        
+                        tasksContainer.appendChild(taskCard);
+                    });
+                } else {
+                    tasksContainer.innerHTML = `
+                        <div class="col-span-3 text-center py-8">
+                            <i class="fa-solid fa-tasks text-4xl text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">No tasks available at the moment.</p>
+                            <p class="text-sm text-gray-400 mt-2">Check back later for new tasks.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load tasks:', error);
+                showFeedback('Failed to load tasks', 'error');
+            }
+        }
+
+        // Complete a task
+        async function completeTask(taskId) {
+            try {
+                showFeedback('Completing task...', 'info');
+                
+                const response = await apiCall(`/tasks/${taskId}/complete`, {
+                    method: 'POST'
+                });
+                
+                if (response) {
+                    completedTasks.add(taskId);
+                    showFeedback(`Task completed! Earned $${response.earnings}`, 'success');
+                    
+                    // Refresh tasks and dashboard data
+                    await loadTasks();
+                    await loadDashboardData();
+                }
+            } catch (error) {
+                console.error('Failed to complete task:', error);
+                showFeedback('Failed to complete task', 'error');
+            }
+        }
+
+        // Load recent activity
+        async function loadRecentActivity() {
+            try {
+                const activityResponse = await apiCall('/transactions/history');
+                if (!activityResponse) return;
+                
+                const activityTable = document.getElementById('recentActivity');
+                activityTable.innerHTML = '';
+                
+                if (activityResponse.transactions && activityResponse.transactions.length > 0) {
+                    activityResponse.transactions.slice(0, 5).forEach(activity => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b hover:bg-gray-50';
+                        row.innerHTML = `
+                            <td class="py-3 px-4">${new Date(activity.created_at).toLocaleDateString()}</td>
+                            <td class="py-3 px-4">${activity.description || 'Transaction'}</td>
+                            <td class="py-3 px-4">$${activity.amount || '0.00'}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                    Completed
+                                </span>
+                            </td>
+                        `;
+                        activityTable.appendChild(row);
+                    });
+                } else {
+                    activityTable.innerHTML = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td colspan="4" class="py-4 px-4 text-center text-gray-500">
+                                No recent activity
+                            </td>
+                        </tr>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load recent activity:', error);
+            }
+        }
+
+        // Handle deposit payment
+        async function initiateDeposit() {
+            const amount = document.getElementById('depositAmount').value;
+            const currency = document.getElementById('depositCurrency').value;
+            
+            if (!amount || amount <= 0) {
+                showFeedback('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            try {
+                // Show processing state
+                document.getElementById('paymentForm').classList.add('hidden');
+                document.getElementById('paymentProcessing').classList.remove('hidden');
+                
+                const response = await apiCall('/payments/initiate', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        amount: parseFloat(amount),
+                        currency: currency,
+                        description: 'Matrix Platform Deposit'
+                    })
+                });
+                
+                if (response && response.redirect_url) {
+                    // Show success state
+                    document.getElementById('paymentProcessing').classList.add('hidden');
+                    document.getElementById('paymentSuccess').classList.remove('hidden');
+                    
+                    // Redirect to payment gateway
+                    setTimeout(() => {
+                        window.location.href = response.redirect_url;
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Payment initiation failed:', error);
+                document.getElementById('paymentProcessing').classList.add('hidden');
+                document.getElementById('paymentForm').classList.remove('hidden');
+                document.getElementById('paymentError').classList.remove('hidden');
+                document.getElementById('paymentErrorMsg').textContent = error.message || 'Payment failed';
+            }
+        }
+
+        // Copy affiliate link
+        function copyAffiliateLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                showFeedback('Affiliate link copied to clipboard!', 'success');
+            }).catch(err => {
+                showFeedback('Failed to copy link', 'error');
+            });
+        }
+
+        // Load page content
+        async function loadPage(page) {
+            const loader = document.getElementById('loader');
+            const mainContent = document.getElementById('mainContent');
+            
+            // Show loader
+            loader.style.display = 'flex';
+            
+            try {
+                let content = '';
+                
+                switch(page) {
+                    case 'dashboard':
+                        await loadDashboardData();
+                        return;
+                    case 'deposit':
+                        content = `
+                            <div class="p-6">
+                                <h2 class="text-2xl font-bold mb-6">Make a Deposit</h2>
+                                <div class="bg-white rounded-2xl p-6 shadow-md">
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium mb-1">Amount</label>
+                                        <input type="number" id="depositAmountPage" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Enter amount" min="1" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium mb-1">Currency</label>
+                                        <select id="depositCurrencyPage" class="w-full p-3 border border-gray-300 rounded-lg">
+                                            <option value="USD">USD ($)</option>
+                                            <option value="KES">KES (KSh)</option>
+                                            <option value="EUR">EUR (€)</option>
+                                            <option value="GBP">GBP (£)</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="initiateDepositFromPage()" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 font-semibold">
+                                        Proceed to Payment
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'profile':
+                        content = `
+                            <div class="p-6">
+                                <h2 class="text-2xl font-bold mb-6">Your Profile</h2>
+                                <div class="bg-white rounded-2xl p-6 shadow-md">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Name</label>
+                                            <p class="p-3 bg-gray-100 rounded-lg">${currentUser.name}</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Email</label>
+                                            <p class="p-3 bg-gray-100 rounded-lg">${currentUser.email}</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Phone</label>
+                                            <p class="p-3 bg-gray-100 rounded-lg">${currentUser.phone}</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Balance</label>
+                                            <p class="p-3 bg-gray-100 rounded-lg">$${currentUser.balance}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    default:
+                        content = `
+                            <div class="p-6 text-center">
+                                <h2 class="text-2xl font-bold mb-4">${page.replace(/_/g, ' ').toUpperCase()} Page</h2>
+                                <p class="text-gray-600">This page is under development.</p>
+                            </div>
+                        `;
+                }
+                
+                mainContent.innerHTML = content;
+                currentPage = page;
+                
+            } catch (error) {
+                console.error('Failed to load page:', error);
+                showFeedback('Failed to load page content', 'error');
             } finally {
                 loader.style.display = 'none';
             }
@@ -1118,14 +1416,7 @@
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
-                    
-                    // Show loading state
-                    showFeedback(`Loading ${page.replace('_', ' ')}...`, 'info');
-                    
-                    // For demo purposes, just show a message
-                    setTimeout(() => {
-                        showFeedback(`Navigating to ${page.replace('_', ' ')} page`, 'info');
-                    }, 500);
+                    loadPage(page);
                 });
             });
         }
@@ -1139,6 +1430,37 @@
                 window.location.href = 'login.php';
             }, 1000);
         }
+
+        // Make functions available globally
+        window.completeTask = completeTask;
+        window.loadTasks = loadTasks;
+        window.copyAffiliateLink = copyAffiliateLink;
+        window.initiateDepositFromPage = function() {
+            const amount = document.getElementById('depositAmountPage').value;
+            const currency = document.getElementById('depositCurrencyPage').value;
+            
+            if (!amount || amount <= 0) {
+                showFeedback('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            // Show payment modal
+            document.getElementById('depositAmount').value = amount;
+            document.getElementById('depositCurrency').value = currency;
+            document.getElementById('paymentModal').style.display = 'flex';
+        };
+
+        // Payment modal handlers
+        document.getElementById('closePaymentModal').addEventListener('click', () => {
+            document.getElementById('paymentModal').style.display = 'none';
+            // Reset modal state
+            document.getElementById('paymentForm').classList.remove('hidden');
+            document.getElementById('paymentProcessing').classList.add('hidden');
+            document.getElementById('paymentSuccess').classList.add('hidden');
+            document.getElementById('paymentError').classList.add('hidden');
+        });
+
+        document.getElementById('initiatePayment').addEventListener('click', initiateDeposit);
 
         // Initialize the app
         initApp();

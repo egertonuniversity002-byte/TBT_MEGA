@@ -89,6 +89,82 @@ transactions_collection = db.transactions
 tasks_collection = db.tasks
 notifications_collection = db.notifications
 
+from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
+import time
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+# In-memory store for chat messages (for demo)
+chat_messages = []
+
+# Simulated rate value
+current_rate = 0.0
+
+# Background task to update rate periodically
+async def rate_updater():
+    global current_rate
+    while True:
+        current_rate += (0.01 * (1 if time.time() % 2 > 1 else -1))
+        if current_rate > 0.15:
+            current_rate = 0.15
+        if current_rate < -0.15:
+            current_rate = -0.15
+        await asyncio.sleep(1)
+
+@app.on_event("startup")
+async def startup_event_additional():
+    asyncio.create_task(rate_updater())
+
+@app.get("/dashboard/rate")
+async def get_current_rate():
+    """Get current simulated rate"""
+    return {"rate": round(current_rate, 4)}
+
+class OrderRequest(BaseModel):
+    type: str  # "buy" or "sell"
+    amount: float
+
+@app.post("/dashboard/order")
+async def place_order(order: OrderRequest, current_user: dict = Depends(get_current_user)):
+    """Place a buy or sell order"""
+    if order.amount <= 0:
+        return JSONResponse(status_code=400, content={"message": "Invalid amount"})
+    if order.type not in ["buy", "sell"]:
+        return JSONResponse(status_code=400, content={"message": "Invalid order type"})
+
+    # For demo, just log order and return success
+    # TODO: Implement real order processing and wallet balance update
+    print(f"User {current_user['email']} placed {order.type} order for amount {order.amount}")
+
+    # Add system chat message
+    chat_messages.append(f"System: {current_user['name']} placed a {order.type.upper()} order for {order.amount}")
+
+    return {"status": "success", "message": f"{order.type.capitalize()} order placed"}
+
+@app.get("/dashboard/wallet")
+async def get_wallet_balance(current_user: dict = Depends(get_current_user)):
+    """Get user's wallet balance"""
+    balance = current_user.get("balance", 0)
+    return {"balance": balance}
+
+@app.websocket("/dashboard/chat/ws")
+async def websocket_chat(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Broadcast message to all connected clients (not implemented here)
+            chat_messages.append(data)
+            await websocket.send_text(f"You said: {data}")
+    except WebSocketDisconnect:
+        print("Client disconnected from chat websocket")
+
+@app.get("/dashboard/chat")
+async def get_chat_messages():
+    """Get recent chat messages"""
+    return {"messages": chat_messages[-50:]}
+
 # PesaPal API URLs
 if settings.PESAPAL_ENVIRONMENT == 'live':
     PESAPAL_API = 'https://www.pesapal.com/api'
@@ -914,11 +990,22 @@ async def purchase_voucher(voucher_id: str, current_user: dict = Depends(get_cur
             raise HTTPException(status_code=404, detail="Voucher not found")
 
         # Check user balance
-        user_balance = current_user.get("balance", 0)
         voucher_price = voucher.get("price", 0)
+        user_balance = current_user.get("balance", 0)
 
         if user_balance < voucher_price:
             raise HTTPException(status_code=400, detail="Insufficient balance")
+
+        # Create voucher purchase record
+        purchase_doc = {
+            "user_id": current_user["_id"],
+            "voucher_id": voucher_id,
+            "amount": voucher_price,
+            "voucher_code": voucher.get("code"),
+            "created_at": datetime.utcnow()
+        }
+
+        await vouchers_collection.insert_one(purchase_doc)
 
         # Deduct from user balance
         await users_collection.update_one(
@@ -932,204 +1019,631 @@ async def purchase_voucher(voucher_id: str, current_user: dict = Depends(get_cur
             {"$inc": {"balance": -voucher_price}}
         )
 
-        # Generate voucher code
-        voucher_code = f"MUL-{random.randint(100000, 999999)}"
-
-        # Create voucher purchase record
-        purchase_doc = {
-            "user_id": current_user["_id"],
-            "voucher_id": voucher_id,
-            "voucher_code": voucher_code,
-            "amount": voucher_price,
-            "status": "active",
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(days=30)  # 30 days validity
-        }
-
-        await transactions_collection.insert_one(purchase_doc)
-
         return {
             "status": "success",
             "message": "Voucher purchased successfully",
-            "voucher_code": voucher_code
+            "voucher_code": voucher.get("code")
         }
 
     except Exception as e:
         print(f"Voucher purchase error: {e}")
         raise HTTPException(status_code=500, detail="Voucher purchase failed")
 
-# Notification endpoints
-@app.get("/notifications")
-async def get_user_notifications(current_user: dict = Depends(get_current_user)):
-    """Get user's notifications"""
+# Admin dashboard endpoints
+@app.get("/admin/dashboard")
+async def get_admin_dashboard(admin_user: dict = Depends(get_current_admin_user)):
+    """Get admin dashboard data"""
     try:
-        # Get user's notifications
-        notifications = await notifications_collection.find(
-            {"user_id": current_user["_id"]},
-            sort=[("created_at", -1)]
-        ).to_list(length=None)
+        # Get total users
+        total_users = await users_collection.count_documents({})
 
-        # Convert ObjectId to string for JSON serialization
+        # Get active users (users who logged in in the last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        active_users = await users_collection.count_documents({
+            "last_login": {"$gte": thirty_days_ago}
+        })
+
+        # Get total earnings
+        earnings_data = await earnings_collection.aggregate([
+            {"$group": {"_id": None, "total_earnings": {"$sum": "$total_earnings"}}}
+        ]).to_list(length=1)
+
+        total_earnings = earnings_data[0]["total_earnings"] if earnings_data else 0
+
+        # Get total withdrawals
+        withdrawals_data = await withdrawals_collection.aggregate([
+            {"$group": {"_id": None, "total_withdrawals": {"$sum": "$amount"}}}
+        ]).to_list(length=1)
+
+        total_withdrawals = withdrawals_data[0]["total_withdrawals"] if withdrawals_data else 0
+
+        # Get recent transactions
+        recent_transactions = await transactions_collection.find(
+            {},
+            sort=[("created_at", -1)],
+            limit=10
+        ).to_list(length=10)
+
+        # Convert ObjectId to string
+        for transaction in recent_transactions:
+            transaction["_id"] = str(transaction["_id"])
+            transaction["user_id"] = str(transaction["user_id"])
+
+        # Get user growth data (last 30 days)
+        user_growth_data = []
+        for i in range(30, -1, -1):
+            date = datetime.utcnow() - timedelta(days=i)
+            start_of_day = datetime(date.year, date.month, date.day)
+            end_of_day = start_of_day + timedelta(days=1)
+
+            users_count = await users_collection.count_documents({
+                "created_at": {"$gte": start_of_day, "$lt": end_of_day}
+            })
+
+            user_growth_data.append({
+                "date": start_of_day.strftime('%Y-%m-%d'),
+                "users": users_count
+            })
+
+        # Get earnings by category
+        earnings_by_category = await earnings_collection.aggregate([
+            {"$group": {
+                "_id": None,
+                "affiliate_earnings": {"$sum": "$affiliate_earnings"},
+                "agent_bonus": {"$sum": "$agent_bonus"},
+                "ads_earnings": {"$sum": "$ads_earnings"},
+                "tiktok_earnings": {"$sum": "$tiktok_earnings"},
+                "youtube_earnings": {"$sum": "$youtube_earnings"},
+                "trivia_earnings": {"$sum": "$trivia_earnings"},
+                "blog_earnings": {"$sum": "$blog_earnings"}
+            }}
+        ]).to_list(length=1)
+
+        earnings_by_category = earnings_by_category[0] if earnings_by_category else {}
+
+        dashboard_data = {
+            "total_users": total_users,
+            "active_users": active_users,
+            "total_earnings": total_earnings,
+            "total_withdrawals": total_withdrawals,
+            "recent_transactions": recent_transactions,
+            "user_growth": user_growth_data,
+            "earnings_by_category": earnings_by_category
+        }
+
+        return {"status": "success", "data": dashboard_data}
+
+    except Exception as e:
+        print(f"Admin dashboard error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch admin dashboard data")
+
+@app.get("/admin/users")
+async def get_admin_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Get paginated list of users for admin"""
+    try:
+        skip = (page - 1) * limit
+
+        # Get users with pagination
+        users_cursor = users_collection.find({}, skip=skip, limit=limit)
+        users = await users_cursor.to_list(length=limit)
+
+        # Get total count
+        total_users = await users_collection.count_documents({})
+
+        # Convert ObjectId to string and remove sensitive data
+        for user in users:
+            user["_id"] = str(user["_id"])
+            user.pop("password", None)
+
+        return {
+            "status": "success",
+            "users": users,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_users,
+                "pages": (total_users + limit - 1) // limit
+            }
+        }
+
+    except Exception as e:
+        print(f"Admin users error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch users")
+
+@app.get("/admin/transactions")
+async def get_admin_transactions(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Get paginated list of transactions for admin"""
+    try:
+        skip = (page - 1) * limit
+
+        # Get transactions with pagination
+        transactions_cursor = transactions_collection.find({}, skip=skip, limit=limit).sort("created_at", -1)
+        transactions = await transactions_cursor.to_list(length=limit)
+
+        # Get total count
+        total_transactions = await transactions_collection.count_documents({})
+
+        # Convert ObjectId to string
+        for transaction in transactions:
+            transaction["_id"] = str(transaction["_id"])
+            transaction["user_id"] = str(transaction["user_id"])
+
+        return {
+            "status": "success",
+            "transactions": transactions,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_transactions,
+                "pages": (total_transactions + limit - 1) // limit
+            }
+        }
+
+    except Exception as e:
+        print(f"Admin transactions error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch transactions")
+
+@app.post("/admin/email-broadcast")
+async def admin_email_broadcast(
+    broadcast_data: AdminEmailBroadcast,
+    background_tasks: BackgroundTasks,
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Send email broadcast to users"""
+    try:
+        # Build query based on filter
+        query = {}
+        if broadcast_data.filter:
+            query = broadcast_data.filter
+
+        # Get users matching the filter
+        users = await users_collection.find(query).to_list(length=None)
+
+        # Send emails in background
+        for user in users:
+            email_body = f"""
+            <h2>{broadcast_data.subject}</h2>
+            <p>{broadcast_data.message}</p>
+            <br>
+            <p>Best regards,<br>{settings.BRAND_NAME} Team</p>
+            """
+            background_tasks.add_task(
+                send_email,
+                user["email"],
+                broadcast_data.subject,
+                email_body
+            )
+
+        return {
+            "status": "success",
+            "message": f"Email broadcast sent to {len(users)} users"
+        }
+
+    except Exception as e:
+        print(f"Email broadcast error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send email broadcast")
+
+@app.post("/admin/notification-broadcast")
+async def admin_notification_broadcast(
+    broadcast_data: AdminNotificationBroadcast,
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Send notification broadcast to users"""
+    try:
+        # Create notification for all users
+        notification_doc = {
+            "title": broadcast_data.title,
+            "message": broadcast_data.message,
+            "type": broadcast_data.type,
+            "is_broadcast": True,
+            "created_at": datetime.utcnow(),
+            "expires_at": datetime.utcnow() + timedelta(days=7)
+        }
+
+        await notifications_collection.insert_one(notification_doc)
+
+        return {
+            "status": "success",
+            "message": "Notification broadcast sent to all users"
+        }
+
+    except Exception as e:
+        print(f"Notification broadcast error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send notification broadcast")
+
+@app.get("/admin/withdrawals")
+async def get_admin_withdrawals(
+    status_filter: str = Query("pending"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Get withdrawal requests for admin approval"""
+    try:
+        skip = (page - 1) * limit
+
+        # Build query
+        query = {"status": status_filter.lower()}
+
+        # Get withdrawals with pagination
+        withdrawals_cursor = withdrawals_collection.find(query, skip=skip, limit=limit).sort("created_at", -1)
+        withdrawals = await withdrawals_cursor.to_list(length=limit)
+
+        # Get total count
+        total_withdrawals = await withdrawals_collection.count_documents(query)
+
+        # Convert ObjectId to string
+        for withdrawal in withdrawals:
+            withdrawal["_id"] = str(withdrawal["_id"])
+            withdrawal["user_id"] = str(withdrawal["user_id"])
+
+        return {
+            "status": "success",
+            "withdrawals": withdrawals,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_withdrawals,
+                "pages": (total_withdrawals + limit - 1) // limit
+            }
+        }
+
+    except Exception as e:
+        print(f"Admin withdrawals error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch withdrawals")
+
+@app.post("/admin/withdrawals/{withdrawal_id}/approve")
+async def approve_withdrawal(
+    withdrawal_id: str,
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Approve a withdrawal request"""
+    try:
+        # Get withdrawal
+        withdrawal = await withdrawals_collection.find_one({"_id": ObjectId(withdrawal_id)})
+        if not withdrawal:
+            raise HTTPException(status_code=404, detail="Withdrawal not found")
+
+        if withdrawal["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Withdrawal already processed")
+
+        # Update withdrawal status
+        await withdrawals_collection.update_one(
+            {"_id": ObjectId(withdrawal_id)},
+            {"$set": {"status": "approved", "processed_at": datetime.utcnow()}}
+        )
+
+        # Send notification to user
+        user = await users_collection.find_one({"_id": withdrawal["user_id"]})
+        if user:
+            notification_doc = {
+                "user_id": withdrawal["user_id"],
+                "title": "Withdrawal Approved",
+                "message": f"Your withdrawal of {format_amount(withdrawal['amount'], user.get('currency', 'USD'))} has been approved and processed.",
+                "type": "success",
+                "created_at": datetime.utcnow()
+            }
+            await notifications_collection.insert_one(notification_doc)
+
+        return {
+            "status": "success",
+            "message": "Withdrawal approved successfully"
+        }
+
+    except Exception as e:
+        print(f"Approve withdrawal error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve withdrawal")
+
+@app.post("/admin/withdrawals/{withdrawal_id}/reject")
+async def reject_withdrawal(
+    withdrawal_id: str,
+    reason: str = Query(""),
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Reject a withdrawal request"""
+    try:
+        # Get withdrawal
+        withdrawal = await withdrawals_collection.find_one({"_id": ObjectId(withdrawal_id)})
+        if not withdrawal:
+            raise HTTPException(status_code=404, detail="Withdrawal not found")
+
+        if withdrawal["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Withdrawal already processed")
+
+        # Refund user balance
+        await users_collection.update_one(
+            {"_id": withdrawal["user_id"]},
+            {"$inc": {"balance": withdrawal["amount"]}}
+        )
+
+        # Update earnings record
+        await earnings_collection.update_one(
+            {"user_id": withdrawal["user_id"]},
+            {"$inc": {"balance": withdrawal["amount"]}}
+        )
+
+        # Update withdrawal status
+        await withdrawals_collection.update_one(
+            {"_id": ObjectId(withdrawal_id)},
+            {"$set": {
+                "status": "rejected",
+                "rejection_reason": reason,
+                "processed_at": datetime.utcnow()
+            }}
+        )
+
+        # Send notification to user
+        user = await users_collection.find_one({"_id": withdrawal["user_id"]})
+        if user:
+            notification_doc = {
+                "user_id": withdrawal["user_id"],
+                "title": "Withdrawal Rejected",
+                "message": f"Your withdrawal of {format_amount(withdrawal['amount'], user.get('currency', 'USD'))} was rejected. Reason: {reason or 'Not specified'}",
+                "type": "error",
+                "created_at": datetime.utcnow()
+            }
+            await notifications_collection.insert_one(notification_doc)
+
+        return {
+            "status": "success",
+            "message": "Withdrawal rejected successfully"
+        }
+
+    except Exception as e:
+        print(f"Reject withdrawal error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reject withdrawal")
+
+@app.get("/admin/analytics")
+async def get_admin_analytics(
+    period: str = Query("30d"),
+    admin_user: dict = Depends(get_current_admin_user)
+):
+    """Get analytics data for admin"""
+    try:
+        # Calculate date range based on period
+        end_date = datetime.utcnow()
+        if period == "7d":
+            start_date = end_date - timedelta(days=7)
+        elif period == "30d":
+            start_date = end_date - timedelta(days=30)
+        elif period == "90d":
+            start_date = end_date - timedelta(days=90)
+        else:
+            start_date = end_date - timedelta(days=30)  # Default to 30 days
+
+        # User registration analytics
+        user_registrations = await users_collection.aggregate([
+            {"$match": {"created_at": {"$gte": start_date, "$lte": end_date}}},
+            {"$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]).to_list(length=None)
+
+        # Earnings analytics
+        earnings_analytics = await earnings_collection.aggregate([
+            {"$match": {"last_updated": {"$gte": start_date, "$lte": end_date}}},
+            {"$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$last_updated"}},
+                "total_earnings": {"$sum": "$total_earnings"},
+                "withdrawn": {"$sum": "$withdrawn"}
+            }},
+            {"$sort": {"_id": 1}}
+        ]).to_list(length=None)
+
+        # Payment analytics
+        payment_analytics = await payments_collection.aggregate([
+            {"$match": {"created_at": {"$gte": start_date, "$lte": end_date}, "status": "completed"}},
+            {"$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+                "total_amount": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]).to_list(length=None)
+
+        # Withdrawal analytics
+        withdrawal_analytics = await withdrawals_collection.aggregate([
+            {"$match": {"created_at": {"$gte": start_date, "$lte": end_date}, "status": "approved"}},
+            {"$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+                "total_amount": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]).to_list(length=None)
+
+        analytics_data = {
+            "user_registrations": user_registrations,
+            "earnings": earnings_analytics,
+            "payments": payment_analytics,
+            "withdrawals": withdrawal_analytics,
+            "period": period,
+            "start_date": start_date.strftime('%Y-%m-%d'),
+            "end_date": end_date.strftime('%Y-%m-%d')
+        }
+
+        return {"status": "success", "data": analytics_data}
+
+    except Exception as e:
+        print(f"Admin analytics error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch analytics data")
+
+# Notifications endpoints
+@app.get("/notifications")
+async def get_notifications(
+    current_user: dict = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Get user notifications"""
+    try:
+        skip = (page - 1) * limit
+
+        # Get user-specific notifications and broadcast notifications
+        query = {
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"is_broadcast": True}
+            ]
+        }
+
+        notifications_cursor = notifications_collection.find(
+            query,
+            skip=skip,
+            limit=limit
+        ).sort("created_at", -1)
+
+        notifications = await notifications_cursor.to_list(length=limit)
+
+        # Get total count
+        total_notifications = await notifications_collection.count_documents(query)
+
+        # Convert ObjectId to string
         for notification in notifications:
             notification["_id"] = str(notification["_id"])
-            notification["user_id"] = str(notification["user_id"])
-
-        # Get unread count
-        unread_count = await notifications_collection.count_documents({
-            "user_id": current_user["_id"],
-            "is_read": {"$ne": True}
-        })
+            if "user_id" in notification:
+                notification["user_id"] = str(notification["user_id"])
 
         return {
             "status": "success",
             "notifications": notifications,
-            "unread_count": unread_count
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_notifications,
+                "pages": (total_notifications + limit - 1) // limit
+            }
         }
 
     except Exception as e:
-        print(f"Error fetching notifications: {e}")
+        print(f"Notifications error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch notifications")
 
 @app.post("/notifications/{notification_id}/read")
-async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
+async def mark_notification_read(
+    notification_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """Mark a notification as read"""
     try:
-        # Convert string ID to ObjectId
-        try:
-            notification_object_id = ObjectId(notification_id)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid notification ID")
+        # Check if notification exists and belongs to user
+        notification = await notifications_collection.find_one({
+            "_id": ObjectId(notification_id),
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"is_broadcast": True}
+            ]
+        })
 
-        # Update notification
-        result = await notifications_collection.update_one(
-            {"_id": notification_object_id, "user_id": current_user["_id"]},
+        if not notification:
+            raise HTTPException(status_code=404, detail="Notification not found")
+
+        # Mark as read
+        await notifications_collection.update_one(
+            {"_id": ObjectId(notification_id)},
             {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
         )
-
-        if result.modified_count == 0:
-            raise HTTPException(status_code=404, detail="Notification not found")
 
         return {"status": "success", "message": "Notification marked as read"}
 
     except Exception as e:
-        print(f"Error marking notification as read: {e}")
+        print(f"Mark notification read error: {e}")
         raise HTTPException(status_code=500, detail="Failed to mark notification as read")
 
-@app.post("/notifications/mark-all-read")
-async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
-    """Mark all user notifications as read"""
-    try:
-        # Update all unread notifications
-        result = await notifications_collection.update_many(
-            {"user_id": current_user["_id"], "is_read": {"$ne": True}},
-            {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
-        )
-
-        return {
-            "status": "success",
-            "message": f"Marked {result.modified_count} notifications as read"
-        }
-
-    except Exception as e:
-        print(f"Error marking all notifications as read: {e}")
-        raise HTTPException(status_code=500, detail="Failed to mark notifications as read")
-
-@app.post("/admin/notifications")
-async def create_notification(
-    title: str,
-    message: str,
-    notification_type: str = "info",
-    user_id: Optional[str] = None,
-    current_user: dict = Depends(get_current_admin_user)
+@app.delete("/notifications/{notification_id}")
+async def delete_notification(
+    notification_id: str,
+    current_user: dict = Depends(get_current_user)
 ):
-    """Create a notification (admin only)"""
+    """Delete a notification"""
     try:
-        notification_doc = {
-            "title": title,
-            "message": message,
-            "type": notification_type,
-            "is_read": False,
-            "created_at": datetime.utcnow()
-        }
+        # Check if notification exists and belongs to user
+        notification = await notifications_collection.find_one({
+            "_id": ObjectId(notification_id),
+            "user_id": current_user["_id"]  # Only user-specific notifications can be deleted
+        })
 
-        if user_id:
-            # Send to specific user
-            try:
-                notification_doc["user_id"] = ObjectId(user_id)
-            except Exception:
-                raise HTTPException(status_code=400, detail="Invalid user ID")
+        if not notification:
+            raise HTTPException(status_code=404, detail="Notification not found")
 
-            result = await notifications_collection.insert_one(notification_doc)
-        else:
-            # Send to all users - get all user IDs
-            users = await users_collection.find({}, {"_id": 1}).to_list(length=None)
+        # Delete notification
+        await notifications_collection.delete_one({"_id": ObjectId(notification_id)})
 
-            # Create notification for each user
-            notifications_to_insert = []
-            for user in users:
-                user_notification = notification_doc.copy()
-                user_notification["user_id"] = user["_id"]
-                notifications_to_insert.append(user_notification)
-
-            if notifications_to_insert:
-                result = await notifications_collection.insert_many(notifications_to_insert)
-                return {
-                    "status": "success",
-                    "message": f"Notification sent to {len(notifications_to_insert)} users"
-                }
-
-        return {
-            "status": "success",
-            "message": "Notification created successfully",
-            "notification_id": str(result.inserted_id) if hasattr(result, 'inserted_id') else None
-        }
+        return {"status": "success", "message": "Notification deleted"}
 
     except Exception as e:
-        print(f"Error creating notification: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create notification")
+        print(f"Delete notification error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete notification")
 
-# Admin endpoints
-@app.get("/admin/dashboard")
-async def admin_dashboard(current_user: dict = Depends(get_current_admin_user)):
-    """Admin dashboard with platform statistics"""
-    # Get statistics
-    total_users = await users_collection.count_documents({})
-    active_users = await users_collection.count_documents({"is_active": True})
-    total_deposits = await payments_collection.count_documents({"status": "completed"})
-    total_withdrawals = await withdrawals_collection.count_documents({"status": "approved"})
-    pending_withdrawals = await withdrawals_collection.count_documents({"status": "pending"})
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        # Check database connection
+        await db.command("ping")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
 
-    # Calculate total deposit amount
-    deposit_pipeline = [
-        {"$match": {"status": "completed"}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]
-    deposit_result = await payments_collection.aggregate(deposit_pipeline).to_list(length=1)
-    total_deposit_amount = deposit_result[0]["total"] if deposit_result else 0
-
-    # Calculate total withdrawal amount
-    withdrawal_pipeline = [
-        {"$match": {"status": "approved"}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]
-    withdrawal_result = await withdrawals_collection.aggregate(withdrawal_pipeline).to_list(length=1)
-    total_withdrawal_amount = withdrawal_result[0]["total"] if withdrawal_result else 0
-
-    dashboard_data = {
-        'statistics': {
-            'total_users': total_users,
-            'active_users': active_users,
-            'total_deposits': total_deposits,
-            'total_withdrawals': total_withdrawals,
-            'pending_withdrawals': pending_withdrawals,
-            'total_deposit_amount': total_deposit_amount,
-            'total_withdrawal_amount': total_withdrawal_amount,
-            'platform_balance': total_deposit_amount - total_withdrawal_amount
-        }
+# Error handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions"""
+    return {
+        "status": "error",
+        "message": exc.detail,
+        "code": exc.status_code
     }
 
-    return {"status": "success", "data": dashboard_data}
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle general exceptions"""
+    return {
+        "status": "error",
+        "message": "Internal server error",
+        "code": 500
+    }
+
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    """Initialize application on startup"""
+    print(f"{settings.BRAND_NAME} FastAPI server starting up...")
+    
+    # Create indexes
+    await users_collection.create_index("email", unique=True)
+    await users_collection.create_index("created_at")
+    await payments_collection.create_index("user_id")
+    await payments_collection.create_index("status")
+    await payments_collection.create_index("created_at")
+    await withdrawals_collection.create_index("user_id")
+    await withdrawals_collection.create_index("status")
+    await withdrawals_collection.create_index("created_at")
+    await notifications_collection.create_index("user_id")
+    await notifications_collection.create_index("is_broadcast")
+    await notifications_collection.create_index("created_at")
+    
+    print("Database indexes created successfully")
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    print(f"{settings.BRAND_NAME} FastAPI server shutting down...")
+    client.close()
+    print("Database connection closed")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
