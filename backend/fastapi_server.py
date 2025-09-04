@@ -125,6 +125,33 @@ class OrderRequest(BaseModel):
     type: str  # "buy" or "sell"
     amount: float
 
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current authenticated user"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+        token_data = TokenData(user_id=user_id)
+    except JWTError:
+        raise credentials_exception
+
+    # Convert string user_id back to ObjectId for database query
+    try:
+        user_object_id = ObjectId(user_id)
+    except Exception:
+        raise credentials_exception
+
+    user = await users_collection.find_one({"_id": user_object_id})
+    if user is None:
+        raise credentials_exception
+    return user
+
 @app.post("/dashboard/order")
 async def place_order(order: OrderRequest, current_user: dict = Depends(get_current_user)):
     """Place a buy or sell order"""
@@ -308,39 +335,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current authenticated user"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-        token_data = TokenData(user_id=user_id)
-    except JWTError:
-        raise credentials_exception
 
-    # Convert string user_id back to ObjectId for database query
-    try:
-        user_object_id = ObjectId(user_id)
-    except Exception:
-        raise credentials_exception
-
-    user = await users_collection.find_one({"_id": user_object_id})
-    if user is None:
-        raise credentials_exception
-    return user
-
-async def get_current_admin_user(current_user: dict = Depends(get_current_user)):
-    """Get current admin user"""
-    admin_emails = os.environ.get('ADMIN_EMAILS', '').split(',') if os.environ.get('ADMIN_EMAILS') else []
-    if current_user.get('email') not in admin_emails:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    return current_user
 
 # Utility functions
 def send_email(to_email: str, subject: str, body: str) -> bool:
@@ -1030,6 +1025,13 @@ async def purchase_voucher(voucher_id: str, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=500, detail="Voucher purchase failed")
 
 # Admin dashboard endpoints
+async def get_current_admin_user(current_user: dict = Depends(get_current_user)):
+    """Get current admin user"""
+    admin_emails = os.environ.get('ADMIN_EMAILS', '').split(',') if os.environ.get('ADMIN_EMAILS') else []
+    if current_user.get('email') not in admin_emails:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    return current_user
+
 @app.get("/admin/dashboard")
 async def get_admin_dashboard(admin_user: dict = Depends(get_current_admin_user)):
     """Get admin dashboard data"""
