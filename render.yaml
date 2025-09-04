@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: matrix-platform-frontend
+    runtime: php
+    buildCommand: "echo 'No build step required'"
+    startCommand: "php -S 0.0.0.0:$PORT -t frontend"
+    envVars:
+      - key: API_BASE_URL
+        value: https://tbt-mega.onrender.com
+    plan: free
