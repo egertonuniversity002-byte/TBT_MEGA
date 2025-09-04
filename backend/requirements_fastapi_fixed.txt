@@ -1,4 +1,3 @@
-# FastAPI dependencies
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-jose[cryptography]==3.3.0
@@ -7,7 +6,7 @@ python-multipart==0.0.6
 
 # Database
 motor==3.3.2
-pymongo==4.3.3
+pymongo>=4.5,<5
 dnspython==2.3.0
 
 # Authentication & Security
@@ -17,10 +16,3 @@ pyjwt==2.7.0
 # HTTP & Utilities
 requests==2.31.0
 python-dotenv==1.0.0
-
-# Email
-smtplib
-
-# Legacy Flask (for reference, can be removed after migration)
-flask==2.3.2
-flask-cors==3.0.10

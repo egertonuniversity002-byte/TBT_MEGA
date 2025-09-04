@@ -801,7 +801,67 @@
             'trivia_history': renderComingSoon('trivia_history'),
             'business_books': renderComingSoon('business_books'),
             'buy_airtime': renderComingSoon('buy_airtime'),
-            'logout': renderComingSoon('logout')
+            'logout': renderComingSoon('logout'),
+            'casino': `
+                <div class="p-8 bg-white rounded-3xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Casino Slot Machine</h2>
+                    <p class="text-gray-600 mb-6">Try your luck with our slot machine! Spin the reels and win big!</p>
+
+                    <!-- Balance Display -->
+                    <div class="bg-gray-100 rounded-lg p-4 mb-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-semibold">Your Balance:</span>
+                            <span id="casinoBalance" class="text-xl font-bold text-green-600">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Slot Machine -->
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="bg-gradient-to-b from-purple-600 to-purple-800 rounded-2xl p-6 shadow-2xl">
+                            <div class="flex space-x-4 mb-4">
+                                <div id="reel1" class="w-20 h-20 bg-white rounded-lg flex items-center justify-center text-4xl font-bold shadow-inner">
+                                    🍒
+                                </div>
+                                <div id="reel2" class="w-20 h-20 bg-white rounded-lg flex items-center justify-center text-4xl font-bold shadow-inner">
+                                    🍋
+                                </div>
+                                <div id="reel3" class="w-20 h-20 bg-white rounded-lg flex items-center justify-center text-4xl font-bold shadow-inner">
+                                    🍊</div>
+                            </div>
+
+                            <!-- Bet Controls -->
+                            <div class="flex flex-col items-center space-y-4">
+                                <div class="flex items-center space-x-4">
+                                    <label class="text-white font-semibold">Bet Amount:</label>
+                                    <input type="number" id="betAmount" min="1" max="100" value="10" class="w-20 px-3 py-2 rounded-lg text-center font-bold">
+                                </div>
+
+                                <button id="spinBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-all">
+                                    <i class="fas fa-play mr-2"></i>SPIN ($<span id="currentBet">10</span>)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Result -->
+                    <div id="gameResult" class="text-center mb-4 hidden">
+                        <div class="text-2xl font-bold mb-2" id="resultText"></div>
+                        <div class="text-lg" id="winAmount"></div>
+                    </div>
+
+                    <!-- Game Rules -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h3 class="font-bold text-blue-800 mb-2">How to Play:</h3>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>• Set your bet amount (minimum $1, maximum $100)</li>
+                            <li>• Click SPIN to play</li>
+                            <li>• Match 3 symbols to win!</li>
+                            <li>• 🍒 = 5x bet, 🍋 = 3x bet, 🍊 = 2x bet</li>
+                            <li>• Jackpot: 3 🍒 = 10x bet!</li>
+                        </ul>
+                    </div>
+                </div>
+            `
         };
 
         // Function to update dashboard earnings with data
@@ -934,7 +994,7 @@
                           <p class="text-3xl sm:text-4xl font-bold mt-2 text-cyan-600" id="triviaEarnings">KSH 0</p>
                           <p class="text-sm text-gray-500 mt-2">Earnings from trivia challenges.</p>
                       </div>
-                      <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transitionall duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                      <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
                           <div class="flex items-center justify-between mb-2">
                               <h3 class="text-lg font-semibold text-gray-800">Blog Earnings</h3>
                               <i class="fas fa-blog text-xl text-cyan-500 opacity-75"></i>

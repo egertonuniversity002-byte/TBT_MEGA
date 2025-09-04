@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="auth.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/css/intlTelInput.css"/>
+  <script src="../config.js"></script>
   <style>
     .message {
       display: none;

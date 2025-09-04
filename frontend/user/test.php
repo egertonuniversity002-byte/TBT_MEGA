@@ -546,7 +546,6 @@
         <a href="#" data-page="chess">Chess</a>
         <a href="#" data-page="checkers">Checkers</a>
         <a href="#" data-page="aviator_game">Aviator</a>
-        <a href="#" data-page="casino">Casino</a>
       </div>
     </div>
     
@@ -657,15 +656,6 @@
 </div>
 
 <script>
-    // API Configuration
-    const API_BASE_URL = window.location.origin.includes('localhost') 
-        ? 'http://localhost:8001' 
-        : window.location.origin;
-    
-    // State management
-    let authToken = localStorage.getItem('authToken');
-    let currentUser = null;
-
     document.addEventListener('DOMContentLoaded', () => {
         // Enhanced feedback system
         function showFeedback(message, type = 'info', title = '', duration = 3000) {
@@ -736,63 +726,6 @@
             return toast;
         }
 
-        // API Helper Functions
-        async function apiCall(endpoint, options = {}) {
-            const url = `${API_BASE_URL}${endpoint}`;
-            const defaultOptions = {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': authToken ? `Bearer ${authToken}` : ''
-                }
-            };
-            
-            const finalOptions = { ...defaultOptions, ...options };
-            
-            try {
-                const response = await fetch(url, finalOptions);
-                
-                if (response.status === 401) {
-                    // Token expired or invalid
-                    localStorage.removeItem('authToken');
-                    authToken = null;
-                    window.location.href = 'login.php';
-                    return null;
-                }
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.detail || `API error: ${response.status}`);
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('API call failed:', error);
-                showFeedback(error.message, 'error', 'API Error');
-                throw error;
-            }
-        }
-
-        // Check authentication
-        async function checkAuth() {
-            if (!authToken) {
-                window.location.href = 'login.php';
-                return false;
-            }
-            
-            try {
-                const userData = await apiCall('/profile');
-                if (userData) {
-                    currentUser = userData;
-                    document.getElementById('avatarCircle').textContent = currentUser.name.charAt(0).toUpperCase();
-                    return true;
-                }
-            } catch (error) {
-                localStorage.removeItem('authToken');
-                window.location.href = 'login.php';
-                return false;
-            }
-        }
-
         // Auto-detect language from browser
         function detectLanguage() {
             const browserLang = navigator.language || navigator.userLanguage;
@@ -816,19 +749,34 @@
         }
 
         // Load dashboard data
-        async function loadDashboardData() {
+        function loadDashboardData() {
             const loader = document.getElementById('loader');
             const mainContent = document.getElementById('mainContent');
             
             // Show loader
             loader.style.display = 'flex';
             
-            try {
-                const dashboardResponse = await apiCall('/dashboard');
-                
-                if (!dashboardResponse) return;
-                
-                const dashboardData = dashboardResponse.data.user;
+            // Simulate API call
+            setTimeout(() => {
+                // Sample data
+                const dashboardData = {
+                    userName: 'John Doe',
+                    todayEarnings: 350.25,
+                    totalEarnings: 1250.75,
+                    earningsGrowth: '+12.5%',
+                    balance: 850.50,
+                    withdrawn: 400.25,
+                    affiliateEarnings: 225.75,
+                    agentBonus: 100.00,
+                    adsEarnings: 75.50,
+                    tiktokEarnings: 50.25,
+                    youtubeEarnings: 35.75,
+                    triviaEarnings: 20.50,
+                    blogEarnings: 15.25,
+                    invested: 500.00,
+                    profit: 125.75,
+                    affiliateLink: 'https://matrixplatform.com/register?ref=12345'
+                };
                 
                 // Render dashboard with original wallet cards
                 mainContent.innerHTML = `
@@ -837,7 +785,7 @@
                         <div class="bg-emerald-600 rounded-3xl shadow-xl p-8 sm:p-12 md:p-16 mb-8 text-white transform transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl">
                             <div class="flex items-center justify-between flex-wrap gap-4">
                                 <div>
-                                    <h1 class="text-3xl sm:text-4xl font-bold">Welcome, <span id="userName" class="text-green-200">${dashboardData.name}</span>!</h1>
+                                    <h1 class="text-3xl sm:text-4xl font-bold">Welcome, <span id="userName" class="text-green-200">${dashboardData.userName}</span>!</h1>
                                     <p class="mt-1 opacity-90 text-sm sm:text-base">Boost your online impact with <span class="font-bold text-green-100">MULAPAL'S 10+ digital tools!</span></p>
                                 </div>
                                 <div class="flex items-center space-x-4">
@@ -849,298 +797,434 @@
                             </div>
                         </div>
                         
-                            <!-- Earnings Cards Section - Restored to original design -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
-                                <!-- Total Earnings Card -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Total Earnings</h2>
-                                            <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-green-600" id="totalEarnings">$${dashboardData.totalEarnings}</p>
-                                        </div>
-                                        <div class="text-4xl text-green-500">
-                                            <i class="fa-solid fa-sack-dollar"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 sm:mt-6">
-                                        <div class="flex items-center justify-between text-sm sm:text-base">
-                                            <span class="text-gray-600">Available Balance</span>
-                                            <span class="font-semibold text-green-600" id="availableBalance">$${dashboardData.availableBalance}</span>
-                                        </div>
-                                    </div>
+                        <!-- Earnings Cards Section - Restored to original design -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                            <!-- Total Earnings Card -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">TOTAL EARNINGS</h3>
+                                    <i class="fas fa-wallet text-xl text-blue-500 opacity-75"></i>
                                 </div>
-                                
-                                <!-- Referral Earnings Card -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 col-span-1 sm:col-span-2 lg:col-span-1 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Referral Earnings</h2>
-                                            <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-blue-600" id="referralEarnings">$${dashboardData.referralEarnings}</p>
-                                        </div>
-                                        <div class="text-4xl text-blue-500">
-                                            <i class="fa-solid fa-users"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 sm:mt-6">
-                                        <div class="flex items-center justify-between text-sm sm:text-base">
-                                            <span class="text-gray-600">Total Referrals</span>
-                                            <span class="font-semibold text-blue-600" id="totalReferrals">${dashboardData.totalReferrals}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <p class="text-4xl sm:text-5xl font-extrabold text-blue-600" id="totalEarnings">$${dashboardData.totalEarnings}</p>
+                                <p class="text-sm mt-1 text-gray-500" id="earningsGrowth">${dashboardData.earningsGrowth} since yesterday</p>
                             </div>
-                            
-                            <!-- Wallet Cards Section - Restored to original design -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                                <!-- YouTube Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">YouTube Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-red-600" id="youtubeWallet">$${dashboardData.youtubeWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-red-500">
-                                            <i class="fa-brands fa-youtube"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-red-600 text-white rounded-full py-2 px-4 hover:bg-red-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
-                                    </div>
+                        
+                            <!-- Balance Card -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Balance</h3>
+                                    <i class="fas fa-coins text-xl text-green-500 opacity-75"></i>
                                 </div>
-                                
-                                <!-- TikTok Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">TikTok Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-blue-600" id="tiktokWallet">$${dashboardData.tiktokWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-blue-500">
-                                            <i class="fa-brands fa-tiktok"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-blue-600 text-white rounded-full py-2 px-4 hover:bg-blue-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <!-- Trivia Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Trivia Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-purple-600" id="triviaWallet">$${dashboardData.triviaWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-purple-500">
-                                            <i class="fa-solid fa-question"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-purple-600 text-white rounded-full py-2 px-4 hover:bg-purple-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <!-- Games Wallet -->
-                                <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-xl">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Games Wallet</h2>
-                                            <p class="mt-2 text-2xl sm:text-3xl font-bold text-orange-600" id="gamesWallet">$${dashboardData.gamesWallet}</p>
-                                        </div>
-                                        <div class="text-3xl text-orange-500">
-                                            <i class="fa-solid fa-gamepad"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4">
-                                        <button class="w-full bg-orange-600 text-white rounded-full py-2 px-4 hover:bg-orange-700 transition-colors text-sm sm:text-base">
-                                            Withdraw
-                                        </button>
-                                    </div>
-                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold text-green-600" id="currentBalance">$${dashboardData.balance}</p>
+                                <p class="text-sm text-gray-500 mt-2">Your available balance for withdrawal.</p>
                             </div>
-                            
-                            <!-- Recent Activity Section -->
-                            <div class="bg-white rounded-3xl shadow-lg p-6 sm:p-8 transform transition-all duration-500 hover:shadow-xl">
-                                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Recent Activity</h2>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full">
-                                        <thead>
-                                            <tr class="border-b">
-                                                <th class="text-left py-2 px-4">Date</th>
-                                                <th class="text-left py-2 px-4">Activity</th>
-                                                <th class="text-left py-2 px-4">Amount</th>
-                                                <th class="text-left py-2 px-4">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentActivity">
-                                            ${dashboardData.recentActivity.map(activity => `
-                                                <tr class="border-b hover:bg-gray-50">
-                                                    <td class="py-3 px-4">${activity.date}</td>
-                                                    <td class="py-3 px-4">${activity.description}</td>
-                                                    <td class="py-3 px-4">$${activity.amount}</td>
-                                                    <td class="py-3 px-4">
-                                                        <span class="px-2 py-1 rounded-full text-xs ${activity.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                                                            ${activity.status}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
+                        
+                            <!-- Withdrawn Card -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Withdrawn</h3>
+                                    <i class="fas fa-exchange-alt text-xl text-orange-500 opacity-75"></i>
                                 </div>
+                                <p class="text-3xl sm:text-4xl font-bold text-orange-600" id="totalWithdrawn">$${dashboardData.withdrawn}</p>
+                                <p class="text-sm text-gray-500 mt-2">Total amount withdrawn to date.</p>
+                            </div>
+                        
+                            <!-- Affiliate Earnings Card -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Affiliate Earnings</h3>
+                                    <i class="fas fa-users text-xl text-yellow-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold text-yellow-600" id="affiliateEarnings">$${dashboardData.affiliateEarnings}</p>
+                                <p class="text-sm text-gray-500 mt-2">Earnings from your team referrals.</p>
+                            </div>
+                        
+                            <!-- Other Earnings Cards Grid -->
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Agent Bonus</h3>
+                                    <i class="fas fa-award text-xl text-cyan-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold text-cyan-600" id="agentBonus">$${dashboardData.agentBonus}</p>
+                                <p class="text-sm text-gray-500 mt-2">Bonus for reaching your agent goals.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Ads Earnings</h3>
+                                    <i class="fas fa-ad text-xl text-cyan-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-cyan-600" id="adsEarnings">$${dashboardData.adsEarnings}</p>
+                                <p class="text-sm text-gray-500 mt-2">Earnings from ad views and clicks.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">TikTok Earnings</h3>
+                                    <i class="fab fa-tiktok text-xl text-cyan-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-cyan-600" id="tiktokEarnings">$${dashboardData.tiktokEarnings}</p>
+                                <p class="text-sm text-gray-500 mt-2">Earnings from TikTok activities.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">YouTube Earnings</h3>
+                                    <i class="fab fa-youtube text-xl text-cyan-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-cyan-600" id="youtubeEarnings">$${dashboardData.youtubeEarnings}</p>
+                                <p class="text-sm text-gray-500 mt-2">Earnings from YouTube activities.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Trivia Earnings</h3>
+                                    <i class="fas fa-question-circle text-xl text-cyan-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-cyan-600" id="triviaEarnings">$${dashboardData.triviaEarnings}</p>
+                                <p class="text-sm text-gray-500 mt-2">Earnings from trivia challenges.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Blog Earnings</h3>
+                                    <i class="fas fa-blog text-xl text-cyan-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-cyan-600" id="blogEarnings">$${dashboardData.blogEarnings}</p>
+                                <p class="text-sm text-gray-500 mt-2">Earnings from blog activities.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Invested</h3>
+                                    <i class="fas fa-chart-line text-xl text-purple-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-purple-600" id="investedAmount">$${dashboardData.invested}</p>
+                                <p class="text-sm text-gray-500 mt-2">Total amount invested in the platform.</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-lg px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col justify-between">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800">Profit</h3>
+                                    <i class="fas fa-trophy text-xl text-emerald-500 opacity-75"></i>
+                                </div>
+                                <p class="text-3xl sm:text-4xl font-bold mt-2 text-emerald-600" id="profitAmount">$${dashboardData.profit}</p>
+                                <p class="text-sm text-gray-500 mt-2">Total profit earned from investments.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Affiliate Link Section -->
+                        <div class="bg-white rounded-3xl shadow-lg p-6 sm:p-8 mb-8 transform transition-all duration-300 hover:scale-[1.01] hover:shadow-xl">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">Your Affiliate Link</h3>
+                            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                                <input type="text" id="affiliateLink" class="flex-grow p-3 border border-gray-300 rounded-lg text-sm" readonly value="${dashboardData.affiliateLink}">
+                                <button id="copyLinkBtn" class="bg-blue-600 text-white rounded-full px-6 py-3 shadow-md hover:bg-blue-700 active:scale-95 transition-all whitespace-nowrap">
+                                    <i class="fas fa-copy mr-2"></i> Copy Link
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Timetable Section -->
+                        <div class="bg-white rounded-3xl shadow-lg p-6 sm:p-8">
+                            <h3 class="text-xl font-bold text-gray-800 mb-6">Weekly Earnings Timetable</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="bg-gray-100 text-gray-600">
+                                            <th class="py-3 px-4 rounded-tl-lg">Product</th>
+                                            <th class="py-3 px-4">Day 1</th>
+                                            <th class="py-3 px-4">Day 2</th>
+                                            <th class="py-3 px-4">Day 3</th>
+                                            <th class="py-3 px-4 rounded-tr-lg">Day 4</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="timetableBody">
+                                        <tr class="border-b last:border-0 border-gray-200 hover:bg-gray-50">
+                                            <td class="py-3 px-4 font-medium">TikTok Earnings</td>
+                                            <td class="py-3 px-4">$12.50</td>
+                                            <td class="py-3 px-4">$15.75</td>
+                                            <td class="py-3 px-4">$18.25</td>
+                                            <td class="py-3 px-4">$20.50</td>
+                                        </tr>
+                                        <tr class="border-b last:border-0 border-gray-200 hover:bg-gray-50">
+                                            <td class="py-3 px-4 font-medium">YouTube Earnings</td>
+                                            <td class="py-3 px-4">$8.75</td>
+                                            <td class="py-3 px-4">$10.25</td>
+                                            <td class="py-3 px-4">$12.50</td>
+                                            <td class="py-3 px-4">$15.00</td>
+                                        </tr>
+                                        <tr class="border-b last:border-0 border-gray-200 hover:bg-gray-50">
+                                            <td class="py-3 px-4 font-medium">Affiliate Earnings</td>
+                                            <td class="py-3 px-4">$25.00</td>
+                                            <td class="py-3 px-4">$28.50</td>
+                                            <td class="py-3 px-4">$32.75</td>
+                                            <td class="py-3 px-4">$35.25</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 `;
                 
-                showFeedback('Dashboard loaded successfully', 'success');
-            } catch (error) {
-                console.error('Failed to load dashboard:', error);
-                mainContent.innerHTML = `
-                    <div class="p-8 text-center">
-                        <h2 class="text-2xl font-bold text-red-600 mb-4">Failed to Load Dashboard</h2>
-                        <p class="text-gray-600 mb-6">Please try refreshing the page or contact support if the problem persists.</p>
-                        <button onclick="location.reload()" class="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700">
-                            Refresh Page
-                        </button>
-                    </div>
-                `;
-            } finally {
+                // Add event listener for the copy button
+                document.getElementById('copyLinkBtn').addEventListener('click', () => {
+                    const affiliateLink = document.getElementById('affiliateLink');
+                    affiliateLink.select();
+                    document.execCommand('copy');
+                    
+                    // Show success message
+                    showFeedback('Affiliate link copied to clipboard!', 'success');
+                });
+                
+                // Hide loader
                 loader.style.display = 'none';
-            }
+                
+                // Show success message
+                showFeedback('Dashboard loaded successfully', 'success');
+            }, 1500);
         }
 
-        // Initialize the application
-        async function initApp() {
-            // Check authentication
-            const isAuthenticated = await checkAuth();
-            if (!isAuthenticated) return;
+        // Load notifications
+        function loadNotifications() {
+            const notifications = [
+                {
+                    id: 1,
+                    title: 'New Reward Available',
+                    message: 'You have a new reward waiting to be claimed',
+                    time: '2 hours ago',
+                    read: false
+                },
+                {
+                    id: 2,
+                    title: 'Deposit Successful',
+                    message: 'Your deposit of $500 has been processed',
+                    time: '5 hours ago',
+                    read: true
+                },
+                {
+                    id: 3,
+                    title: 'Referral Bonus',
+                    message: 'You earned $25 from a referral',
+                    time: '1 day ago',
+                    read: false
+                },
+                {
+                    id: 4,
+                    title: 'System Update',
+                    message: 'New features have been added to the platform',
+                    time: '2 days ago',
+                    read: true
+                }
+            ];
             
-            // Auto-detect language
-            detectLanguage();
+            const unreadCount = notifications.filter(n => !n.read).length;
             
-            // Load dashboard data
-            await loadDashboardData();
+            // Update badge
+            const badge = document.getElementById('notificationBadge');
+            const countElement = document.getElementById('notificationCount');
             
-            // Setup event listeners
-            setupEventListeners();
+            if (unreadCount > 0) {
+                badge.classList.remove('hidden');
+                badge.textContent = unreadCount;
+                countElement.textContent = unreadCount;
+            } else {
+                badge.classList.add('hidden');
+                countElement.textContent = '0';
+            }
             
-            // Show welcome message
-            showFeedback('Welcome to Matrix Dashboard!', 'success', 'Success');
+            // Render notifications list
+            const notificationsList = document.getElementById('notificationsList');
+            notificationsList.innerHTML = '';
+            
+            notifications.forEach(notification => {
+                const notificationElement = document.createElement('div');
+                notificationElement.className = `p-4 hover:bg-gray-50 cursor-pointer ${!notification.read ? 'bg-blue-50' : ''}`;
+                notificationElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-semibold ${!notification.read ? 'text-blue-700' : 'text-gray-800'}">${notification.title}</h4>
+                            <p class="text-sm text-gray-600 mt-1">${notification.message}</p>
+                            <p class="text-xs text-gray-400 mt-2">${notification.time}</p>
+                        </div>
+                        ${!notification.read ? '<span class="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></span>' : ''}
+                    </div>
+                `;
+                
+                notificationElement.addEventListener('click', () => {
+                    // Mark as read
+                    notification.read = true;
+                    loadNotifications();
+                    showFeedback('Notification marked as read', 'success');
+                });
+                
+                notificationsList.appendChild(notificationElement);
+            });
         }
 
         // Setup event listeners
         function setupEventListeners() {
             // Mobile sidebar toggle
             document.getElementById('hamburger').addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('open');
-                document.getElementById('overlay').classList.toggle('visible');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('overlay');
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('visible');
             });
             
-            // Close sidebar when clicking overlay
+            // Overlay click to close sidebar
             document.getElementById('overlay').addEventListener('click', () => {
-                document.getElementById('sidebar').classList.remove('open');
-                document.getElementById('overlay').classList.remove('visible');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('overlay');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('visible');
             });
             
-            // Submenu toggle
-            document.querySelectorAll('.submenu-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const submenu = btn.nextElementSibling;
-                    submenu.classList.toggle('open');
-                    
-                    // Rotate chevron icon
-                    const chevron = btn.querySelector('.fa-chevron-down');
-                    chevron.classList.toggle('rotate-180');
-                });
-            });
+            // Notifications dropdown
+            const notificationsBtn = document.getElementById('notificationsBtn');
+            const notificationsDropdown = document.getElementById('notificationsDropdown');
             
-            // Logout functionality
-            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-            document.getElementById('sidebarLogoutBtn').addEventListener('click', handleLogout);
-            
-            // Profile menu toggle
-            document.getElementById('profileBtn').addEventListener('click', (e) => {
+            notificationsBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                document.getElementById('profileMenu').classList.toggle('hidden');
+                notificationsDropdown.classList.toggle('hidden');
             });
             
-            // Language menu toggle
-            document.getElementById('languageBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.getElementById('languageMenu').classList.toggle('hidden');
-            });
-            
-            // Notifications toggle
-            document.getElementById('notificationsBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.getElementById('notificationsDropdown').classList.toggle('hidden');
-            });
-            
-            // Close menus when clicking elsewhere
+            // Close notifications when clicking outside
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('#profileMenu') && !e.target.closest('#profileBtn')) {
-                    document.getElementById('profileMenu').classList.add('hidden');
+                if (!notificationsBtn.contains(e.target) && !notificationsDropdown.contains(e.target)) {
+                    notificationsDropdown.classList.add('hidden');
                 }
-                
-                if (!e.target.closest('#languageMenu') && !e.target.closest('#languageBtn')) {
-                    document.getElementById('languageMenu').classList.add('hidden');
-                }
-                
-                if (!e.target.closest('#notificationsDropdown') && !e.target.closest('#notificationsBtn')) {
-                    document.getElementById('notificationsDropdown').classList.add('hidden');
+            });
+            
+            // Language dropdown
+            const languageBtn = document.getElementById('languageBtn');
+            const languageMenu = document.getElementById('languageMenu');
+            
+            languageBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                languageMenu.classList.toggle('hidden');
+            });
+            
+            // Close language menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!languageBtn.contains(e.target) && !languageMenu.contains(e.target)) {
+                    languageMenu.classList.add('hidden');
                 }
             });
             
             // Language selection
-            document.querySelectorAll('#languageMenu button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const lang = btn.getAttribute('data-lang');
+            document.querySelectorAll('#languageMenu button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const lang = button.getAttribute('data-lang');
                     document.getElementById('currentLanguage').textContent = lang.toUpperCase();
-                    document.getElementById('languageMenu').classList.add('hidden');
+                    languageMenu.classList.add('hidden');
                     
                     if (lang === 'sw') {
-                        showFeedback('Lugha imebadilishwa kuwa Kiswahili', 'success', 'Lugha');
+                        showFeedback('Lughimekobadilishwa kuwa Kiswahili', 'success', 'Lugha');
                     } else {
                         showFeedback('Language changed to English', 'success', 'Language');
                     }
                 });
             });
             
-            // Navigation links
-            document.querySelectorAll('a[data-page]').forEach(link => {
+            // Profile dropdown
+            const profileBtn = document.getElementById('profileBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileMenu.classList.toggle('hidden');
+            });
+            
+            // Close profile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                    profileMenu.classList.add('hidden');
+                }
+            });
+            
+            // Logout functionality
+            const logoutBtn = document.getElementById('logoutBtn');
+            const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
+            
+            const logout = () => {
+                showFeedback('Logging out...', 'info');
+                setTimeout(() => {
+                    showFeedback('You have been logged out successfully', 'success');
+                    // In a real app, this would redirect to login page
+                }, 1500);
+            };
+            
+            if (logoutBtn) logoutBtn.addEventListener('click', logout);
+            if (sidebarLogoutBtn) sidebarLogoutBtn.addEventListener('click', logout);
+            
+            // Submenu toggle
+            document.querySelectorAll('.submenu-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const submenu = btn.nextElementSibling;
+                    submenu.classList.toggle('open');
+                    
+                    // Rotate icon
+                    const icon = btn.querySelector('.fa-chevron-down');
+                    icon.classList.toggle('fa-rotate-180');
+                });
+            });
+            
+            // Sidebar navigation
+            document.querySelectorAll('.sidebar a[data-page]').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const page = link.getAttribute('data-page');
                     
-                    // Show loading state
-                    showFeedback(`Loading ${page.replace('_', ' ')}...`, 'info');
+                    // Remove active class from all links
+                    document.querySelectorAll('.sidebar a').forEach(a => {
+                        a.classList.remove('active');
+                    });
                     
-                    // For demo purposes, just show a message
-                    setTimeout(() => {
-                        showFeedback(`Navigating to ${page.replace('_', ' ')} page`, 'info');
-                    }, 500);
+                    // Add active class to clicked link
+                    link.classList.add('active');
+                    
+                    // Close sidebar on mobile
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('sidebar').classList.remove('open');
+                        document.getElementById('overlay').classList.remove('visible');
+                    }
+                    
+                    // Show loading message
+                    const pageName = link.getAttribute('data-page').replace(/_/g, ' ');
+                    showFeedback(`Loading ${pageName}...`, 'info');
                 });
+            });
+            
+            // Mark all as read button
+            document.getElementById('markAllReadBtn').addEventListener('click', () => {
+                showFeedback('All notifications marked as read', 'success');
+                // Close dropdown
+                notificationsDropdown.classList.add('hidden');
+            });
+            
+            // View all notifications button
+            document.getElementById('viewAllNotificationsBtn').addEventListener('click', () => {
+                showFeedback('Opening all notifications...', 'info');
+                // Close dropdown
+                notificationsDropdown.classList.add('hidden');
             });
         }
 
-        // Handle logout
-        function handleLogout() {
-            localStorage.removeItem('authToken');
-            authToken = null;
-            showFeedback('Logging out...', 'info');
+        // Initialize the application
+        function initApp() {
+            // Auto-detect language
+            detectLanguage();
+            
+            // Load dashboard
+            loadDashboardData();
+            
+            // Load notifications
+            loadNotifications();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Show welcome message
             setTimeout(() => {
-                window.location.href = 'login.php';
+                showFeedback('Welcome to Matrix Platform!', 'success', 'Welcome');
             }, 1000);
         }
 
-        // Initialize the app
+        // Start the app
         initApp();
     });
 </script>
